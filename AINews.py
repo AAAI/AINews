@@ -144,19 +144,19 @@ def rank():
     
 def publish():
     publisher = AINewsPublisher()
-    #publisher.generate_standard_output()
-    publisher.generate_email_output()
-    publisher.generate_pmwiki_output()
-    publisher.publish_email()
-    publisher.publish_pmwiki()
-    publisher.update_rss()
+    publisher.generate_standard_output()
+    #publisher.generate_email_output()
+    #publisher.generate_pmwiki_output()
+    #publisher.publish_email()
+    #publisher.publish_pmwiki()
+    #publisher.update_rss()
     
 def publish_daily():
     publisher = AINewsPublisher()
-    publisher.generate_email_output()
-    publisher.generate_pmwiki_output()
-    publisher.publish_email_daily()
-    publisher.publish_pmwiki_daily()
+    #publisher.generate_email_output()
+    #publisher.generate_pmwiki_output()
+    #publisher.publish_email_daily()
+    #publisher.publish_pmwiki_daily()
     #publisher.update_rss()
     
 def main():
