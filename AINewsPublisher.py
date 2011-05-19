@@ -12,6 +12,7 @@ from os import path, mkdir
 from glob import glob
 from subprocess import *
 from datetime import date, datetime, timedelta
+from operator import itemgetter
 from AINewsTools import loadpickle, savefile,savepickle
 from AINewsConfig import config, aitopic_urls
 
@@ -19,13 +20,21 @@ class AINewsPublisher():
     def __init__(self):
         self.debug = config['ainews.debug']
         self.today = date.today()
-        self.topnews = loadpickle("output/topnews.pkl")
         self.topicids = {"AIOverview":0, "Agents":1, "Applications":2,
            "CognitiveScience":3, "Education":4,"Ethics":5, 
            "Games":6, "History":7, "Interfaces":8, "MachineLearning":9,
            "NaturalLanguage":10, "Philosophy":11, "Reasoning":12,
            "Representation":13, "Robots":14, "ScienceFiction":15,"Speech":16,
            "Systems":17,  "Vision":18}
+
+        topnews_unfiltered = loadpickle("output/topnews.pkl")
+        ## filter topnews, so as to select only a few stories from each topic
+        stories_per_topic = int(config['publisher.stories_per_topic'])
+        self.topnews = []
+        for topic in self.topicids.keys():
+            news = filter(lambda n: n['topic'] == topic, topnews_unfiltered)
+            self.topnews += news[:stories_per_topic+1]
+        self.topnews = sorted(self.topnews, key=itemgetter('score'), reverse=True)
         
         currmonth = self.today.strftime("%Y-%m")
         p = "output/monthly/" + currmonth
