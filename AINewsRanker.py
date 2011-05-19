@@ -37,8 +37,12 @@ from AINewsTools import loadpickle, unescape,  getwords, savepickle, loadfile2
 
 class AINewsRanker:
     def __init__(self):
-        period = int(config['ainews.period'])
-        self.begindate = date.today() - timedelta(days = period)
+        self.begindate = date(int(config['ainews.begin_year']),
+                              int(config['ainews.begin_month']),
+                              int(config['ainews.begin_day']))
+        self.enddate = date(int(config['ainews.end_year']),
+                            int(config['ainews.end_month']),
+                            int(config['ainews.end_day']))
         self.debug = config['ainews.debug']
         
         self.svm = AINewsSVM()
@@ -172,8 +176,9 @@ class AINewsRanker:
         @return: a list of candidate news' urlid
         @rtype: C{list}
         """
-        sql = """select rowid from urllist where pubdate >= '%s' and topic <> 'NotRelated'
-                 order by rowid asc""" % self.begindate
+        sql = """select rowid from urllist where pubdate >= '%s' and pubdate <= '%s'
+                 and topic <> 'NotRelated'
+                 order by rowid asc""" % (self.begindate, self.enddate)
         rows = self.db.selectall(sql)
         urlids = [row[0] for row in rows]
         return urlids
@@ -216,8 +221,8 @@ class AINewsRanker:
         # Only retrieve latest news in period
         texttablelist  += ', urllist'
         clauselist     += """ and w0.urlid = urllist.rowid
-                        and urllist.pubdate >= '%s'
-                        and urllist.topic <> 'NotRelated'""" % self.begindate
+                        and urllist.pubdate >= '%s' and urllist.pubdate <= '%s''
+                        and urllist.topic <> 'NotRelated'""" % (self.begindate, self.enddate)
         # Create the query from the separate parts
         textfullquery = 'select %s from %s where %s' % \
                             (fieldlist, texttablelist, clauselist)

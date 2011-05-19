@@ -41,9 +41,9 @@ class AINewsPublisher():
         """
         std_output = ""
         for news in self.topnews:
-            std_output += """%f\t(%d)%s - %s(%s)\n\t\t%s\n""" \
+            std_output += """%f\t(%d) %s - (%s)\n%s\t%s\n\n""" \
                       % (news['score'], news['urlid'], news['title'], \
-                         news['topic'], news['pubdate'], news['url'])
+                         news['pubdate'], news['topic'], news['url'])
         savefile("output/std_output.txt", std_output.encode('utf-8'))
         
         

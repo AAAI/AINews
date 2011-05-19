@@ -28,8 +28,6 @@ class AINewsParser:
         self.today = date.today()
         self.link_density = config['parser.link_density_ratio']
         self.debug = config['ainews.debug']
-        period = int(config['ainews.period'])
-        self.begindate = self.today - timedelta(days = period)
         self.clear()
         self.db = AINewsDB()
         self.summarizer = AINewsSummarizer()
