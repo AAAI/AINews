@@ -49,7 +49,7 @@ cmd = '%s -l 0 -u 1 -s "%s" "%s" > "%s"' % (svmscale_exe, range_file, train_path
 print('Scaling training data...')
 Popen(cmd, shell = True, stdout = PIPE).communicate()	
 
-cmd = '%s -svmtrain "%s" -gnuplot "%s" "%s"' % (grid_py, svmtrain_exe, gnuplot_exe, scaled_file)
+cmd = '%s -svmtrain "%s" "%s"' % (grid_py, svmtrain_exe, scaled_file)
 print('Cross validation...')
 f = Popen(cmd, shell = True, stdout = PIPE).stdout
 
