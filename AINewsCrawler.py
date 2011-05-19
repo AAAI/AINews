@@ -43,6 +43,8 @@ class AINewsCrawler:
     def __init__(self):
         self.today = date.today()
         self.debug = config['ainews.debug']
+        period = int(config['ainews.period'])
+        self.begindate = self.today - timedelta(days = period)
         
         self.db = AINewsDB()
         self.textprocessor = AINewsTextProcessor()

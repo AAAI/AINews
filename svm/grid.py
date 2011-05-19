@@ -97,7 +97,7 @@ Usage: grid.py [-log2c begin,end,step] [-log2g begin,end,step] [-v fold]
     assert os.path.exists(svmtrain_exe),"svm-train executable not found"    
     assert os.path.exists(gnuplot_exe),"gnuplot executable not found"
     assert os.path.exists(dataset_pathname),"dataset not found"
-    gnuplot = Popen(gnuplot_exe,stdin = PIPE).stdin
+    #gnuplot = Popen(gnuplot_exe,stdin = PIPE).stdin
 
 
 def range_f(begin,end,step):
@@ -132,33 +132,33 @@ def redraw(db,best_param,tofile=False):
 
     best_log2c,best_log2g,best_rate = best_param
 
-    if tofile:
-        gnuplot.write( "set term png transparent small\n".encode())
-        gnuplot.write( ("set output \"%s\"\n" % png_filename.replace('\\','\\\\')).encode())
+    #if tofile:
+        #gnuplot.write( "set term png transparent small\n".encode())
+        #gnuplot.write( ("set output \"%s\"\n" % png_filename.replace('\\','\\\\')).encode())
         #gnuplot.write("set term postscript color solid\n".encode())
         #gnuplot.write(("set output \"%s.ps\"\n" % dataset_title).encode())
-    elif is_win32:
-        gnuplot.write("set term windows\n".encode())
-    else:
-        gnuplot.write( "set term x11\n".encode())
-    gnuplot.write("set xlabel \"log2(C)\"\n".encode())
-    gnuplot.write("set ylabel \"log2(gamma)\"\n".encode())
-    gnuplot.write(("set xrange [%s:%s]\n" % (c_begin,c_end)).encode())
-    gnuplot.write(("set yrange [%s:%s]\n" % (g_begin,g_end)).encode())
-    gnuplot.write("set dgrid3d 50,50\n".encode())
-    gnuplot.write("set contour\n".encode())
-    gnuplot.write(("set cntrparam levels incremental %s,%s,100\n" % (begin_level,step_size)).encode())
-    gnuplot.write("unset surface\n".encode())
-    gnuplot.write("unset ztics\n".encode())
-    gnuplot.write("set view 0,0\n".encode())
-    gnuplot.write(("set title \"%s\"\n" % dataset_title).encode())
-    gnuplot.write("unset label\n".encode())
-    gnuplot.write(("set label \"Best log2(C) = %s  log2(gamma) = %s  accuracy = %s%%\" \
-                  at screen 0.5,0.85 center\n" % \
-                  (best_log2c, best_log2g, best_rate)).encode())
-    gnuplot.write(("set label \"C = %s  gamma = %s\""
-                  " at screen 0.5,0.8 center\n" % (2**best_log2c, 2**best_log2g)).encode())
-    gnuplot.write("splot \"-\" with lines\n".encode())
+    #elif is_win32:
+        #gnuplot.write("set term windows\n".encode())
+    #else:
+        #gnuplot.write( "set term x11\n".encode())
+    #gnuplot.write("set xlabel \"log2(C)\"\n".encode())
+    #gnuplot.write("set ylabel \"log2(gamma)\"\n".encode())
+    #gnuplot.write(("set xrange [%s:%s]\n" % (c_begin,c_end)).encode())
+    #gnuplot.write(("set yrange [%s:%s]\n" % (g_begin,g_end)).encode())
+    #gnuplot.write("set dgrid3d 50,50\n".encode())
+    #gnuplot.write("set contour\n".encode())
+    #gnuplot.write(("set cntrparam levels incremental %s,%s,100\n" % (begin_level,step_size)).encode())
+    #gnuplot.write("unset surface\n".encode())
+    #gnuplot.write("unset ztics\n".encode())
+    #gnuplot.write("set view 0,0\n".encode())
+    #gnuplot.write(("set title \"%s\"\n" % dataset_title).encode())
+    #gnuplot.write("unset label\n".encode())
+    #gnuplot.write(("set label \"Best log2(C) = %s  log2(gamma) = %s  accuracy = %s%%\" \
+    #              at screen 0.5,0.85 center\n" % \
+    #              (best_log2c, best_log2g, best_rate)).encode())
+    #gnuplot.write(("set label \"C = %s  gamma = %s\""
+    #              " at screen 0.5,0.8 center\n" % (2**best_log2c, 2**best_log2g)).encode())
+    #gnuplot.write("splot \"-\" with lines\n".encode())
     
     
 
@@ -166,15 +166,15 @@ def redraw(db,best_param,tofile=False):
     
     db.sort(key = lambda x:(x[0], -x[1]))
 
-    prevc = db[0][0]
-    for line in db:
-        if prevc != line[0]:
-            gnuplot.write("\n".encode())
-            prevc = line[0]
-        gnuplot.write(("%s %s %s\n" % line).encode())
-    gnuplot.write("e\n".encode())
-    gnuplot.write("\n".encode()) # force gnuplot back to prompt when term set failure
-    gnuplot.flush()
+    #prevc = db[0][0]
+    #for line in db:
+    #    if prevc != line[0]:
+    #        gnuplot.write("\n".encode())
+    #        prevc = line[0]
+    #    gnuplot.write(("%s %s %s\n" % line).encode())
+    #gnuplot.write("e\n".encode())
+    #gnuplot.write("\n".encode()) # force gnuplot back to prompt when term set failure
+    #gnuplot.flush()
 
 
 def calculate_jobs():
