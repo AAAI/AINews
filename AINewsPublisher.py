@@ -33,7 +33,7 @@ class AINewsPublisher():
         self.topnews = []
         for topic in self.topicids.keys():
             news = filter(lambda n: n['topic'] == topic, topnews_unfiltered)
-            self.topnews += news[:stories_per_topic+1]
+            self.topnews += news[:stories_per_topic]
         self.topnews = sorted(self.topnews, key=itemgetter('score'), reverse=True)
         
         currmonth = self.today.strftime("%Y-%m")
