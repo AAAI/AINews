@@ -18,7 +18,7 @@ else:
 is_win32 = (sys.platform == 'win32')
 if not is_win32:
        svmtrain_exe = "libsvm-2.91/svm-train"
-       gnuplot_exe = "/home/glick/bin/gnuplot"
+       gnuplot_exe = "/usr/bin/gnuplot"
 else:
        # example for windows
        svmtrain_exe = r"..\windows\svm-train.exe"

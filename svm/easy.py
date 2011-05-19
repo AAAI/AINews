@@ -16,7 +16,7 @@ if not is_win32:
 	svmtrain_exe = "libsvm-2.91/svm-train"
 	svmpredict_exe = "libsvm-2.91/svm-predict"
 	grid_py = "./grid.py"
-	gnuplot_exe = "/home/glick/bin/gnuplot"
+	gnuplot_exe = "/usr/bin/gnuplot"
 else:
         # example for windows
 	svmscale_exe = r"..\windows\svm-scale.exe"
