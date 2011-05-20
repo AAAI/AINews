@@ -86,6 +86,10 @@ def ParserFactory(publisher, type):
         parser = LATimesRSSParser()
     elif publisher == "RobotNet" and type == 'rss':
         parser = RobotNetRSSParser()
+    elif publisher == "ScienceDaily" and type == 'rss':
+        parser = ScienceDailyRSSParser()
+    elif publisher == "IEEE Spectrum" and type == 'rss':
+        parser = IEEESpectrumRSSParser()
     else:
         parser = None
     return parser
@@ -1777,5 +1781,92 @@ class GoogleNewsRSSParser(AINewsParser):
             self.candidates[i][0] = self.url
             self.candidates[i].append(summary)
             self.candidates[i].append(text)
+
+class ScienceDailyRSSParser(AINewsParser):
+    """
+    RSS parser for ScienceDaily
+    e.g. http://www.sciencedaily.com/rss/computers_math/artificial_intelligence.xml
+    """
+    def parse_sourcepage(self, rss_url):
+        f = feedparser.parse(rss_url)
+        for entry in f.entries:
+            d = date(entry.date_parsed[0], \
+                    entry.date_parsed[1], entry.date_parsed[2])
+            if d > self.today or d < self.begindate: continue
             
-   
+            url = entry.link
+            title = entry.title
+            self.candidates.append([url, title, d])
+                
+    def parse_storypage(self):
+        for i, candidate in enumerate(self.candidates):
+            res = self.parse_url(candidate[0])
+            if not res or self.url == None or self.db.isindexed(self.url):
+                continue
+            try:
+                self.soup = BeautifulSoup(self.html)
+            except Exception, error:
+                print >> sys.stderr, "SOUP ERROR: %s" % error
+                continue
+            
+            mainsoup = self.soup.find("div", {"id" : "story"})
+            self.remove_tag(mainsoup,'div','id','seealso')
+            self.remove_tag(mainsoup,'span','class','date')
+            self.remove_tag(mainsoup,'img')
+            self.remove_tag(mainsoup,'object')
+            self.remove_tag(mainsoup,'h1')
+            self.remove_tag(mainsoup,'h2')
+            self.remove_tag(mainsoup,'h4')
+            comments = self.soup.findAll(text=lambda text:isinstance(text, Comment))
+            [comment.extract() for comment in comments]
+
+            text = self.extract_genenraltext(mainsoup)
+            text = re.sub(r'\s+', ' ', text)
+            summary = self.summarizer.summarize(text, 4)
+            text = re.sub(r'&.*?;', ' ', text)
+            self.candidates[i].append(summary)
+            self.candidates[i].append(text)
+  
+class IEEESpectrumRSSParser(AINewsParser):
+    """
+    RSS parser for IEEE Spectrum
+    e.g. http://feeds.feedburner.com/IeeeSpectrumAI?format=xml
+    """
+    def parse_sourcepage(self, rss_url):
+        f = feedparser.parse(rss_url)
+        for entry in f.entries:
+            # dates not available, so don't choose today
+            d = date.today()
+            url = entry.link
+            title = entry.title
+            self.candidates.append([url, title, d])
+                
+    def parse_storypage(self):
+        for i, candidate in enumerate(self.candidates):
+            res = self.parse_url(candidate[0])
+            if not res or self.url == None or self.db.isindexed(self.url):
+                continue
+            try:
+                self.soup = BeautifulSoup(self.html)
+            except Exception, error:
+                print >> sys.stderr, "SOUP ERROR: %s" % error
+                continue
+            
+            mainsoup = self.soup.find("div", {"class" : "articleBody"})
+            self.remove_tag(mainsoup,'div','id','sbchnnLstng')
+            self.remove_tag(mainsoup,'img')
+            self.remove_tag(mainsoup,'iframe')
+            self.remove_tag(mainsoup,'object')
+            self.remove_tag(mainsoup,'h1')
+            self.remove_tag(mainsoup,'h2')
+            self.remove_tag(mainsoup,'h4')
+            comments = self.soup.findAll(text=lambda text:isinstance(text, Comment))
+            [comment.extract() for comment in comments]
+
+            text = self.extract_genenraltext(mainsoup)
+            text = re.sub(r'\s+', ' ', text)
+            summary = self.summarizer.summarize(text, 4)
+            text = re.sub(r'&.*?;', ' ', text)
+            self.candidates[i].append(summary)
+            self.candidates[i].append(text)
+  
