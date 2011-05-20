@@ -106,6 +106,7 @@ class AINewsCrawler:
                 pub_date    = candidate[2]
                 desc        = re.sub(r'\s+', ' ', candidate[3])
                 text        = candidate[4]
+                if self.debug: print "Considering %s (%s)" % (title, url)
                 if not self.contain_whiteterm(text): continue
                 if isinstance(desc, types.StringType):
                     desc = unicode(desc, errors = 'ignore')
