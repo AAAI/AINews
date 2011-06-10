@@ -7,9 +7,6 @@ agent_name  = AINewsFinder
 ; turn On/Off for extra debug information
 debug       = On
 
-; ainews_root is the root directory of the Python code
-ainews_root = /home/josh/Documents/AINews/
-
 ; period is the # of days for crawling and ranking news
 period      = 7
 
@@ -21,26 +18,11 @@ end_year = 2011
 end_month = 05
 end_day = 19
 
-config_path  = /home/josh/Documents/AINews/config.ini
-
-lib_dir      = /home/josh/Documents/AINews/lib/            
-
-[pmwiki]
-dir           = /home/josh/Documents/aitopics-mirror/aaai.org/pmwiki/
-
-[database]
-; parameters to connect MySQL database
-host        = localhost
-user        = root
-pwd         = lambda%0
-db          = ainews
-
 [parser]
 ; link density ratio is the ratio of #link words to # total words
 ; the parser will remove the whole block content if the ratio is larger than 
 ; this threshold for noisy removal.
 link_density_ratio = 0.4
-
 
 [textprocessor]
 ; the type is either SIMPLE or NE to process text paragraphs into bag of words.
@@ -103,7 +85,6 @@ subscribers         = ldong@clemson.edu:buchanan@cs.pitt.edu:rgsmith@marathonoil
 
 [sim]
 cutoff = 0.23
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;

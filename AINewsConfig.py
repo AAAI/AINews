@@ -6,15 +6,14 @@ It parses the config.ini as well as pre-define several static parameters.
 import sys
 from AINewsTools import loadconfig
 
-# Load those user configable parameters
-config =  loadconfig("config.ini")
+# Load those user configurable parameters
+config = loadconfig("config/config.ini")
 
-lib_dir = config['ainews.lib_dir']
-sys.path.append(lib_dir)
+# Load db parameters
+db = loadconfig("config/db.ini")
 
-
-# The location of the AINewsFinder's directory for Python files.
-ainews_root = config['ainews.ainews_root']
+# Load paths
+paths = loadconfig("config/paths.ini")
 
 # The whitelist_unigrams, bigrams and trigrams are used to filter those
 # un-related news articles in the first place. Any news should at least

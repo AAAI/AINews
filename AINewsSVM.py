@@ -12,7 +12,7 @@ from os import chdir,getcwd,path,chmod
 from svmutil import *
 from subprocess import *
 
-from AINewsConfig import config
+from AINewsConfig import config, paths
 from AINewsTools import loadcsv, savefile, loadfile
 from AINewsDB import AINewsDB
 
@@ -49,7 +49,7 @@ class AINewsSVM:
         """
         Collect user's feedback and generate an output file with mean, st.dev.
         """
-        feedback_path = config['pmwiki.dir'] + 'pub/rater/logs/'
+        feedback_path = paths['pmwiki.dir'] + 'pub/rater/logs/'
         rater_count_cutoff = int(config['feedback.rater_count_cutoff'])
         stdev_cutoff  = float(config['feedback.stdev_cutoff'])
         output = ""
@@ -226,7 +226,7 @@ class AINewsSVM:
         @type filename: C{string}
         """
         cwd = getcwd()
-        svm_path = config['ainews.ainews_root'] + 'svm'
+        svm_path = paths['ainews.svm_data']
         chdir(svm_path)
         cmd = 'python easy.py "%s"' % filename
         Popen(cmd, shell = True, stdout = PIPE).communicate()
@@ -284,7 +284,7 @@ class AINewsSVM:
         @param urlids: list of latest news' urlid to be predicted
         @type urlids: C{list}
         """
-        svm_path = config['ainews.ainews_root']+"svm/"
+        svm_path = paths['ainews.svm_data']
         mysvm = svm_load_model(svm_path + filename + ".model")
         self.__load_range(svm_path + filename + ".range")
         results = []
@@ -320,7 +320,7 @@ class AINewsSVM:
         @param urlids: list of latest news' urlid to be predicted
         @type urlids: C{list}
         """
-        svm_path = config['ainews.ainews_root']+"svm/"
+        svm_path = paths['ainews.svm_data']
         mysvm = svm_load_model(svm_path + filename + ".model")
         self.__load_range(svm_path + filename + ".range")
         results = []
@@ -372,11 +372,11 @@ class AINewsSVM:
             for wordid in sorted(doc.keys()):
                 line += ' '+str(wordid)+':'+str(doc[wordid])
             content += line + '\n'
-        savefile('svm/IsRelated', content)
+        savefile(paths['ainews.svm_data'] + 'IsRelated', content)
         
         # use libsvm command tool to train
         cwd = getcwd()
-        svm_path = config['ainews.ainews_root'] + 'svm'
+        svm_path = paths['ainews.svm_data']
         chdir(svm_path)
         cmd = 'python easy.py IsRelated'
         Popen(cmd, shell = True, stdout = PIPE).communicate()
@@ -476,7 +476,7 @@ def Correlation(x, y):
         from AINewsCrawler import AINewsCrawler
         crawler = AINewsCrawler()
         
-        feedback_path = config['pmwiki.dir'] + 'pub/rater/logs/'
+        feedback_path = paths['pmwiki.dir'] + 'pub/rater/logs/'
         admin_votes = int(config['feedback.admin_votes'])
         # default path: resource/training_score.csv file
         filename = config['svm.training_score_file']
