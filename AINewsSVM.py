@@ -9,7 +9,7 @@ import math
 import glob
 import stat
 from os import chdir,getcwd,path,chmod
-from svm import *
+from svmutil import *
 from subprocess import *
 
 from AINewsConfig import config
@@ -285,15 +285,15 @@ class AINewsSVM:
         @type urlids: C{list}
         """
         svm_path = config['ainews.ainews_root']+"svm/"
-        mysvm = svm_model(svm_path + filename + ".model")
+        mysvm = svm_load_model(svm_path + filename + ".model")
         self.__load_range(svm_path + filename + ".range")
         results = []
         for urlid in urlids:
             data = self.__retrieve_url_tfidf(urlid)
-            p = mysvm.predict_probability(data)
-            # p = (1.0, {1: 0.62317989329642587, -1: 0.3768201067035743})
-            # or p = (-1.0, {1: 0.32028073946853403, -1: 0.67971926053146625})
-            results.append(p[1][1])
+            p = svm_predict([0], [data], mysvm, "-b 1")
+            # p = ([1.0], _, [[0.62317989329642587 0.3768201067035743]])
+            # where the first prob is for -1, the second for 1
+            results.append(p[2][0][1])
         return results
     
         
@@ -321,12 +321,13 @@ class AINewsSVM:
         @type urlids: C{list}
         """
         svm_path = config['ainews.ainews_root']+"svm/"
-        mysvm = svm_model(svm_path + filename + ".model")
+        mysvm = svm_load_model(svm_path + filename + ".model")
         self.__load_range(svm_path + filename + ".range")
         results = []
         for urlid in urlids:
             data = self.__retrieve_url_tfidf(urlid)
-            cat = mysvm.predict(data)
+            cat = svm_predict([0], [data], mysvm)
+            print cat
             results.append(cat)
         return results
     

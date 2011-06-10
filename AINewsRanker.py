@@ -117,25 +117,25 @@ class AINewsRanker:
         for (i,row) in enumerate(rows):
             urlid = row[0]
 
-	    rs = self.relscores[2]
-	    if row[1] > row[2]:
+            rs = self.relscores[2]
+            if row[1] > row[2]:
                 if row[1] > row[3]:
-		    rs = self.relscores[0]
-		    scores[urlid] = rs * 10000
-		    if urlid in simnews.keys():
-			scores[urlid]+= len(simnews[urlid])*10
+                    rs = self.relscores[0]
+                    scores[urlid] = rs * 10000
+                    if urlid in simnews.keys():
+                        scores[urlid]+= len(simnews[urlid])*10
             elif row[2] > row[3]:
-		rs = self.relscores[1]
-		scores[urlid] = rs * 10000
-		if urlid in simnews.keys():
-			scores[urlid]+= len(simnews[urlid])*10
+                rs = self.relscores[1]
+                scores[urlid] = rs * 10000
+                if urlid in simnews.keys():
+                        scores[urlid]+= len(simnews[urlid])*10
 
             sql = "UPDATE urllist SET svmscore = %f WHERE rowid = %d" \
                     % (rs, urlid)
             self.db.execute(sql)
 
-	    # update initial SVM score
-	    sql = """UPDATE urllist SET initsvm = %f
+            # update initial SVM score
+            sql = """UPDATE urllist SET initsvm = %f
                      WHERE rowid = %d and isnull(initsvm)""" % (rs, urlid)
             self.db.execute(sql)
 
@@ -158,7 +158,7 @@ class AINewsRanker:
             else:
                 scores[urlid] += len(self.srcscores.keys())*5 # *10/2
         
-	
+        
         # output into pkl file which is ready for publishing.
         sscores = sorted(scores.iteritems(), key=itemgetter(1), reverse=True)
         topnews = []

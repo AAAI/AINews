@@ -15,7 +15,7 @@ whether the save news is related or not.
 import math
 import stat
 from os import chdir,getcwd,path,chmod
-from svm import *
+from svmutil import *
 from subprocess import *
 
 from AINewsConfig import config
@@ -29,7 +29,7 @@ class AINewsRelatedClassifier:
         '''
         filename = "IsRelated"
         svm_path = config['ainews.ainews_root']+"svm/"
-        self.mysvm = svm_model(svm_path + filename + ".model")
+        self.mysvm = svm_load_model(svm_path + filename + ".model")
         self.range = {}
         self.__load_range(svm_path + filename + ".range")
         
@@ -60,7 +60,7 @@ class AINewsRelatedClassifier:
             if key in self.range.keys():
                 scaled_data[key] = data[key] / self.range[key]
                 
-        isrelated = self.mysvm.predict(scaled_data)
+        isrelated = svm_predict([0], [scaled_data], self.mysvm)
         #print isrelated
         return isrelated
         
