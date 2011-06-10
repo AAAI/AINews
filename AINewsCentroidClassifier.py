@@ -18,7 +18,6 @@ Author: Liang Dong
 
 import os
 import math
-from svm import *
 from subprocess import *
 import time
 from datetime import datetime
