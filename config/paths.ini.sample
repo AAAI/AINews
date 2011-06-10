@@ -7,6 +7,8 @@ ainews_root = /path/to/AINews/
 ; (leave trailing slash)
 svm_data = /path/to/svm/
 
+stoplist = /path/to/stoplist.txt
+
 [pmwiki]
 
 ; (leave trailing slash)

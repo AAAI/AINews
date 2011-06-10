@@ -20,12 +20,9 @@ from nltk.probability import FreqDist
 from nltk.tokenize import RegexpTokenizer
 import nltk.data
 
-from AINewsTools import loadstoplist
+from AINewsConfig import stopwords
 
 class AINewsSummarizer:
-	def __init__(self):
-		self.stopwords = loadstoplist()
-
 	def reorder_sentences( self, output_sentences, input ):
 		output_sentences.sort( lambda s1, s2:
 			input.find(s1) - input.find(s2) )
@@ -40,7 +37,7 @@ class AINewsSummarizer:
 		# get the frequency of each word in the input
 		base_words = [word.lower() 
 			for word in tokenizer.tokenize(input)]
-		words = [word for word in base_words if word not in self.stopwords]
+		words = [word for word in base_words if word not in stopwords]
 		word_frequencies = FreqDist(words)
 		
 		# now create a set of the most frequent words

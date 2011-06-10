@@ -11,8 +11,7 @@ import re
 import nltk
 import types
 from nltk.corpus import wordnet as wn
-from AINewsTools import loadstoplist
-from AINewsConfig import config
+from AINewsConfig import config, stopwords
 
 class AINewsTextProcessor:
     """
@@ -24,7 +23,6 @@ class AINewsTextProcessor:
         """
         Initialize AINewsTextProcessor class
         """
-        self.stopwords = loadstoplist()
         self.debug = config['ainews.debug']
         
     def unigrams(self, raw):
@@ -64,7 +62,7 @@ class AINewsTextProcessor:
         words = self.unigrams(raw)
         words = [self.simple_pos_morphy(w) for w in words \
                             if len(w)>2 and not w.isdigit()
-                             and w.lower() not in self.stopwords ]
+                             and w.lower() not in stopwords ]
         return nltk.FreqDist(words)
         
     def textprocess(self, raw, onlyNOUN = True):
@@ -108,14 +106,14 @@ class AINewsTextProcessor:
         if onlyNOUN == True:
             unigram_words = [w.lower() for w in NN_words \
                             if len(w)>2 and w.find('\'') == -1
-                                and w.lower() not in self.stopwords
+                                and w.lower() not in stopwords
                                 and not w.isdigit()]
         else:
             VB_words = self.__pos_morphy(VB_words, wn.VERB)
             JJ_words = self.__pos_morphy(JJ_words, wn.ADJ)
             unigram_words = [w.lower() for w in NN_words + VB_words + JJ_words \
                             if len(w)>2 and w.find('\'') == -1
-                                and  w.lower() not in self.stopwords
+                                and  w.lower() not in stopwords
                                 and not w.isdigit()]
       
         #self.freqdist = nltk.FreqDist(unigram_words + NE_words)

@@ -22,6 +22,16 @@ whitelist_unigrams = frozenset(config['crawler.whitelist_unigrams'].split(":"))
 whitelist_bigrams  = frozenset(config['crawler.whitelist_bigrams'].split(":"))
 whitelist_trigrams = frozenset(config['crawler.whitelist_trigrams'].split(":"))
 
+stopwords = set()
+try:
+    file = open(paths['ainews.stoplist'], "r")
+except IOError:
+    print "Fail to open stop-list file"
+else:
+    for word in file.readlines():
+        stopwords.add(word.rstrip())
+    file.close()
+
 # aitopic_urls is used to assign each news to a category by comparing the
 # similarity with the following webpages.
 aitopic_urls = [

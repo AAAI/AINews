@@ -11,8 +11,6 @@ import pickle
 import locale
 import ConfigParser
 
-
-
 def nukedir(dir):
     """
     Delete all files and remove directory.
@@ -199,18 +197,3 @@ def getwords(raw):
     splitter=re.compile('\\W*')
     return [s.lower() for s in splitter.split(raw) if s != '']
 
-
-def loadstoplist():
-    """
-    Load the stoplist to remove most common words
-    """
-    words = set()
-    try:
-        file = open("resource/stoplist.txt", "r")
-    except IOError:
-        print "Fail to open stop-list file"
-    else:
-        for word in file.readlines():
-            words.add(word.rstrip())
-        file.close()
-    return words
