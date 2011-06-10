@@ -18,7 +18,7 @@ from os import chdir,getcwd,path,chmod
 from svmutil import *
 from subprocess import *
 
-from AINewsConfig import config
+from AINewsConfig import config, paths
 from AINewsTools import loadcsv, savefile, loadfile
 from AINewsDB import AINewsDB
 
@@ -28,7 +28,7 @@ class AINewsRelatedClassifier:
         Initialize the parameters of AINewsRelatedClassifier
         '''
         filename = "IsRelated"
-        svm_path = config['ainews.ainews_root']+"svm/"
+        svm_path = paths['ainews.ainews_root']+"svm/"
         self.mysvm = svm_load_model(svm_path + filename + ".model")
         self.range = {}
         self.__load_range(svm_path + filename + ".range")

@@ -1,0 +1,8 @@
+[database]
+
+; parameters to connect MySQL database
+host = localhost
+user = johndoe
+pwd  = secret
+db   = ainews
+

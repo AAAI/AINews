@@ -7,19 +7,19 @@ import sys
 import re
 import MySQLdb
 
-from AINewsConfig import config
+from AINewsConfig import db
            
 class AINewsDB:
     def __init__(self):
-        host = config['database.host']
-        user = config['database.user']
-        pwd = config['database.pwd']
-        db = config['database.db']
+        host = db['database.host']
+        user = db['database.user']
+        pwd = db['database.pwd']
+        database = db['database.db']
         try:
             self.con = MySQLdb.connect(host = host,
                                         user = user,
                                         passwd = pwd,
-                                        db = db,
+                                        db = database,
                                         use_unicode = True)
         except MySQLdb.Error, e:
             print "Error %d: %s" % (e.args[0], e.args[1])

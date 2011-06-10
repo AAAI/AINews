@@ -4,7 +4,7 @@ import re
 import time
 import types
 from datetime import date, timedelta
-from AINewsConfig import config, ainews_root, \
+from AINewsConfig import config, paths, \
      whitelist_bigrams, whitelist_unigrams, whitelist_trigrams
 from AINewsTools import savefile, loadcsv, strip_html, savepickle, loadfile
 from AINewsParser import AINewsParser
@@ -30,7 +30,7 @@ class TestSourceParser():
         """
         Crawl the news by source lists (Search page or RSS).
         """
-        rows = loadcsv(ainews_root+config['crawler.sources'])
+        rows = loadcsv(paths['ainews.ainews_root']+config['crawler.sources'])
         for row in rows:
             print "Source:", row
             if len(row) < 5: continue

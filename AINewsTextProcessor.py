@@ -12,7 +12,7 @@ import nltk
 import types
 from nltk.corpus import wordnet as wn
 from AINewsTools import loadstoplist
-from AINewsConfig import config, ainews_root
+from AINewsConfig import config
 
 class AINewsTextProcessor:
     """

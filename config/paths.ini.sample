@@ -1,0 +1,14 @@
+[ainews]
+
+; ainews_root is the root directory of the Python code
+; (leave trailing slash)
+ainews_root = /path/to/AINews/
+
+; (leave trailing slash)
+svm_data = /path/to/svm/
+
+[pmwiki]
+
+; (leave trailing slash)
+dir = /path/to/pmwiki/
+

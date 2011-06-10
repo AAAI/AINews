@@ -18,7 +18,7 @@ import getopt
 import locale
 from datetime import date, timedelta
 
-from AINewsConfig import config, ainews_root, \
+from AINewsConfig import config, \
      whitelist_bigrams, whitelist_unigrams, whitelist_trigrams, \
      dateformat_regexps
 from AINewsTools import savefile, loadcsv, strip_html, savepickle, loadfile2
