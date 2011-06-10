@@ -1049,7 +1049,7 @@ class TimesParser(AINewsParser):
 class PCWorldParser(AINewsParser):
     '''
     Parse for PC World Magzine
-    e.g.http://www.pcworld.com/search.html?qt=%22artificial+intelligence%22&index=article&t=2&s=d
+    e.g. http://www.pcworld.com/search2/news?qt=%22artificial+intelligence%22
     '''
     def parse_sourcepage(self, url):
         self.parse_url(url)
@@ -1058,9 +1058,9 @@ class PCWorldParser(AINewsParser):
         except Exception, error:
             if self.debug: print >> sys.stderr, "SOUP ERROR: %s" % error
             return False
-        mainmysoup = self.soup.find('ul', {'class': "storyList"})
-        mysoups = mainmysoup.findAll('li', {'class':' '})
-        for mysoup in mysoups[:3]:
+        mainmysoup = self.soup
+        mysoups = mainmysoup.findAll('li', {'class':'clearfix'})
+        for mysoup in mysoups:
             item = mysoup.find('a',href=True)
             if item == None: continue
             url  = item['href']

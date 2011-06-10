@@ -97,8 +97,12 @@ class AINewsCrawler:
             parser = ParserFactory(publisher, type)
             if parser == None: continue
             if self.debug: print "Crawling from %s by %s:" % (publisher, tag)
-            parser.parse_sourcepage(sourcepage_url)
-            parser.parse_storypage()
+            try:
+                parser.parse_sourcepage(sourcepage_url)
+                parser.parse_storypage()
+            except:
+                if self.debug: print "Parser for %s failed." % (publisher)
+                continue;
             for candidate in parser.candidates:
                 if len(candidate) != 5: continue
                 url         = candidate[0]
