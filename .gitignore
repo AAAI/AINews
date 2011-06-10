@@ -5,4 +5,5 @@ svm/IsRelated*
 *.pyc
 config/*.ini
 *.swp
+resource/
 
