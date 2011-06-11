@@ -5,9 +5,6 @@
 ainews_root = /path/to/AINews/
 
 ; (leave trailing slash)
-svm_data = /path/to/svm/
-
-; (leave trailing slash)
 category_data = /path/to/category/
 
 ; (leave trailing slash)
@@ -25,4 +22,19 @@ stoplist = /path/to/stoplist.txt
 
 ; (leave trailing slash)
 dir = /path/to/pmwiki/
+
+[svm]
+
+; (leave trailing slash)
+svm_data = /path/to/svm/
+
+
+[feedback]
+
+; collect the user's feedback score into a file
+feedback_score = /path/to/resource/feedback.csv
+editor_score   = /path/to/resource/editor.csv
+
+
+
 

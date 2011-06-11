@@ -29,7 +29,7 @@ from operator import itemgetter
 
 
 from AINewsConfig import config, aitopic_urls, whitelist_unigrams, \
-                        whitelist_bigrams, whitelist_trigrams
+                        whitelist_bigrams, whitelist_trigrams, paths
 from AINewsDB import AINewsDB
 from AINewsSVM import AINewsSVM
 from AINewsSim import AINewsSim
@@ -166,7 +166,7 @@ class AINewsRanker:
             info = self.get_urlinfo(urlid)
             info['score'] = score
             topnews.append(info)
-        savepickle("output/topnews.pkl", topnews)
+        savepickle(paths['ainews.output'] + "topnews.pkl", topnews)
     
     
         

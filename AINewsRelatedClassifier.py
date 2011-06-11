@@ -28,7 +28,7 @@ class AINewsRelatedClassifier:
         Initialize the parameters of AINewsRelatedClassifier
         '''
         filename = "IsRelated"
-        svm_path = paths['ainews.svm_data']
+        svm_path = paths['svm.svm_data']
         self.mysvm = svm_load_model(svm_path + filename + ".model")
         self.range = {}
         self.__load_range(svm_path + filename + ".range")

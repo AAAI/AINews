@@ -107,7 +107,7 @@ class AINewsSVM:
             output += "%d:%f:%f:%d\n" % (urlid, newsscore, sd, n)
             
             
-        savefile(config['feedback.feedback_score'], output)
+        savefile(paths['feedback.feedback_score'], output)
         
         
     def build_allwords_idf(self):
@@ -194,8 +194,16 @@ class AINewsSVM:
         """
         The three categories SVM trainer.
         """
+        if self.debug:
+            print "Training ranks 4-5..."
         self.train("45", (3.33, 5.01))
+
+        if self.debug:
+            print "Training ranks 2-3..."
         self.train("23", (1.67, 3.33))
+
+        if self.debug:
+            print "Training ranks 0-1..."
         self.train("01", (0, 1.67))
     
     def __generate_libsvm_input(self, pos, filename):
@@ -225,12 +233,8 @@ class AINewsSVM:
         @param filename: the libSVM formatted input file
         @type filename: C{string}
         """
-        cwd = getcwd()
-        svm_path = paths['ainews.svm_data']
-        chdir(svm_path)
-        cmd = 'python easy.py "%s"' % filename
+        cmd = 'python svm-easy.py "%s"' % filename
         Popen(cmd, shell = True, stdout = PIPE).communicate()
-        chdir(cwd)
             
       
     
@@ -284,7 +288,7 @@ class AINewsSVM:
         @param urlids: list of latest news' urlid to be predicted
         @type urlids: C{list}
         """
-        svm_path = paths['ainews.svm_data']
+        svm_path = paths['svm.svm_data']
         mysvm = svm_load_model(svm_path + filename + ".model")
         self.__load_range(svm_path + filename + ".range")
         results = []
@@ -320,7 +324,7 @@ class AINewsSVM:
         @param urlids: list of latest news' urlid to be predicted
         @type urlids: C{list}
         """
-        svm_path = paths['ainews.svm_data']
+        svm_path = paths['svm.svm_data']
         mysvm = svm_load_model(svm_path + filename + ".model")
         self.__load_range(svm_path + filename + ".range")
         results = []
@@ -372,15 +376,11 @@ class AINewsSVM:
             for wordid in sorted(doc.keys()):
                 line += ' '+str(wordid)+':'+str(doc[wordid])
             content += line + '\n'
-        savefile(paths['ainews.svm_data'] + 'IsRelated', content)
+        savefile(paths['svm.svm_data'] + 'IsRelated', content)
         
         # use libsvm command tool to train
-        cwd = getcwd()
-        svm_path = paths['ainews.svm_data']
-        chdir(svm_path)
-        cmd = 'python easy.py IsRelated'
+        cmd = 'python svm-easy.py IsRelated'
         Popen(cmd, shell = True, stdout = PIPE).communicate()
-        chdir(cwd)
             
     def get_related(self, urlid):
         sql = "select topic from urllist where rowid = %d" % urlid

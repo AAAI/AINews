@@ -1,9 +1,4 @@
-svm/01*
-svm/23*
-svm/45*
-svm/IsRelated*
 *.pyc
 config/*.ini
 *.swp
-resource/
 

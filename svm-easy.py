@@ -11,7 +11,7 @@ if len(sys.argv) <= 1:
 svmscale_exe = "svm-scale"
 svmtrain_exe = "svm-train"
 svmpredict_exe = "svm-predict"
-grid_py = "./grid.py"
+grid_py = "./svm-grid.py"
 
 train_pathname = sys.argv[1]
 assert os.path.exists(train_pathname),"training file not found"

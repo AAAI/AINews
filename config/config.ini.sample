@@ -29,14 +29,8 @@ link_density_ratio = 0.4
 ; SIMPLE represents quick process, and NE represents parsing name entity, but it
 ; runs much slower) 
 type            = SIMPLE
-stoplist_path   = resource/stoplist.txt
 
 [crawler]
-sources          = resource/sources.csv
-; following three paths are deprecated
-googlenews_rss   = resource/googlenews_rss_feeds.csv
-majorsources_rss = resource/majorsources_rss_feeds.csv
-majorsources_topicpage = resource/majorsources_topicpage.csv
 
 ; whitelist_Ngrams is used to check the content of the news and make sure at least one keyword exist in the news content
 whitelist_unigrams  = aaai:ai:cognition:induction:turing:informatics:singularity:humanoid:avatar:darpa:bayes
@@ -45,9 +39,6 @@ whitelist_trigrams  = nature of intelligence:semi autonomous systems:semi autono
 
 
 [svm]
-; LIBSVM library is used to train the news.
-training_score_file = resource/training_score.csv
-
 ; select word whose document freqency is among (lower_ratio*total doc, upper_ratio*total doc)
 docfreq_upper_ratio = 0.6
 docfreq_lower_ratio = 0.03
@@ -56,9 +47,6 @@ docfreq_lower_ratio = 0.03
 admins = Bgbuchanan:Rgsmith:Ldong
 
 [feedback]
-; collect the user's feedback score into a file
-feedback_score      = resource/feedback.csv
-editor_score        = resource/editor.csv
 ;deprecated. when admin vote, it's counted as more votes
 admin_votes        = 3 
 

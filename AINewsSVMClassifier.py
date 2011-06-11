@@ -69,18 +69,14 @@ class AINewsSVMClassifier:
         
         print "(4) Training 1-against-rest classifier for each category"
         
-        cwd = os.getcwd()
-        svm_path = 'category/'
-        os.chdir(svm_path)
         for category in self.categories:
             print "\tTraining ", category
             start = datetime.now()
-            filename = os.path.join(cwd, dest_dir, category+"_train")
-            cmd = 'python easy.py "%s" ' % filename
+            filename = os.path.join(paths['ainews.category_data'], dest_dir, category+"_train")
+            cmd = 'python svm-easy.py "%s" ' % filename
             Popen(cmd, shell = True, stdout = PIPE).communicate()
             end = datetime.now()
             print "\tTime spent:", end - start
-        os.chdir(cwd)
         
         print "(5) Done"
         
