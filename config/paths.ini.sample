@@ -18,6 +18,10 @@ rss = /path/to/rss
 
 stoplist = /path/to/stoplist.txt
 
+[templates]
+
+compiled = /path/to/compiled
+
 [pmwiki]
 
 ; (leave trailing slash)
