@@ -53,7 +53,6 @@ class AINewsCrawler:
         self.sourcetype = 'database'   # type is either 'database or file'
         
         # classifier topic
-        #self.topic = AINewsTopic()
         model_dir = "category/centroid/"
         self.classifier = AINewsCentroidClassifier()
         self.classifier.init_predict(model_dir)
@@ -100,6 +99,9 @@ class AINewsCrawler:
             try:
                 parser.parse_sourcepage(sourcepage_url)
                 parser.parse_storypage()
+            except (KeyboardInterrupt):
+                if self.debug: print "Quitting early due to keyboard interrupt."
+                sys.exit()
             except:
                 if self.debug: print "Parser for %s failed." % (publisher)
                 continue;
