@@ -11,6 +11,7 @@ import PyRSS2Gen
 import sys
 from os import path, mkdir
 from glob import glob
+from random import shuffle
 from subprocess import *
 from datetime import date, datetime, timedelta
 from operator import itemgetter
@@ -33,13 +34,30 @@ class AINewsPublisher():
            "Representation":13, "Robots":14, "ScienceFiction":15,"Speech":16,
            "Systems":17,  "Vision":18}
 
-        topnews_unfiltered = loadpickle(paths['ainews.output'] + "topnews.pkl")
-        ## filter topnews, so as to select only a few stories from each topic
-        stories_per_topic = int(config['publisher.stories_per_topic'])
+        news_unfiltered = loadpickle(paths['ainews.output'] + "topnews.pkl")
+        # filter topnews_unfiltered, moving through each category one at a
+        # time, picking a top story in that category until STORIES_COUNT
+        # stories are obtained
+        stories_count = int(config['publisher.stories_count'])
+        topicids = self.topicids.keys()
         self.topnews = []
-        for topic in self.topicids.keys():
-            news = filter(lambda n: n['topic'] == topic, topnews_unfiltered)
-            self.topnews += news[:stories_per_topic]
+        for max_count in range(1, stories_count + 1):
+            if(len(self.topnews) == stories_count):
+                break
+            shuffle(topicids)
+            for topic in topicids:
+                if(len(self.topnews) == stories_count):
+                    break
+                topic_count = len(filter(lambda n: n['topic'] == topic, self.topnews))
+                if(topic_count == max_count):
+                    continue
+                topic_news = filter(lambda n: n['topic'] == topic, news_unfiltered)
+                if(len(topic_news) == 0):
+                    continue
+                self.topnews.append(topic_news[0])
+                news_unfiltered.remove(topic_news[0])
+
+        # sort topnews disregarding topic (sort on score)
         self.topnews = sorted(self.topnews, key=itemgetter('score'), reverse=True)
         
         currmonth = self.today.strftime("%Y-%m")
@@ -93,7 +111,6 @@ class AINewsPublisher():
         """
         cmd = 'php AINewsEmail.php'
         Popen(cmd, shell = True, stdout = PIPE).communicate()
-        
         self.publish_email_semiauto()
         
     def publish_email_semiauto(self):

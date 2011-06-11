@@ -64,7 +64,7 @@ source_order = NY Times:BBC:ScientificAmerican:IEEE Spectrum:ScienceDaily:CNN:MS
 rank_cutoff      = 1000
 
 [publisher]
-stories_per_topic   = 4
+stories_count       = 12
 
 [email]
 sender_account      = ainewsfinder@gmail.com
