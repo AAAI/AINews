@@ -18,7 +18,7 @@ import getopt
 import locale
 from datetime import date, timedelta
 
-from AINewsConfig import config, \
+from AINewsConfig import config, paths, \
      whitelist_bigrams, whitelist_unigrams, whitelist_trigrams, \
      dateformat_regexps
 from AINewsTools import savefile, loadcsv, strip_html, savepickle, loadfile2
@@ -109,7 +109,7 @@ class AINewsSubmitNews:
             self.add_freq_index(wordfreq, 'textwordurl', 'dftext', urlid)
               
             if topic == "":
-                model_dir = "category/centroid/"
+                model_dir = paths['ainews.category_data'] + "centroid/"
                 self.classifier = AINewsCentroidClassifier()
                 self.classifier.init_predict(model_dir)
                 topic = self.classifier.predict(urlid)
@@ -212,11 +212,11 @@ class AINewsSubmitNews:
         """
         urlid = str(urlid)
         try:
-            savepickle("news/desc/"+ urlid + '.pkl', desc)
-            savepickle("news/text/"+ urlid +'.pkl', text)
-            #if html!=None: savefile("news/html/"+ urlid +'.html', html)
+            savepickle(paths['ainews.news_data'] + "desc/"+ urlid + '.pkl', desc)
+            savepickle(paths['ainews.news_data'] + "text/"+ urlid +'.pkl', text)
+            #if html!=None: savefile(paths['ainews.news_data'] + "html/"+ urlid +'.html', html)
             meta = (urlid, url, title, pubdate)
-            savepickle("news/meta/"+urlid+'.pkl', meta)
+            savepickle(paths['ainews.news_data'] + "meta/"+urlid+'.pkl', meta)
         except Exception:
             pass
 

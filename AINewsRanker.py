@@ -240,7 +240,7 @@ class AINewsRanker:
                 from urllist where rowid = %d""" % urlid
         row = self.db.selectone(sql)
         if row[5] == None:
-            desc_file = 'news/desc/'+str(urlid)+'.pkl'
+            desc_file = paths['ainews.news_data'] + 'desc/'+str(urlid)+'.pkl'
             desc = loadpickle(desc_file).strip()
         else:
             desc = unescape(row[5])

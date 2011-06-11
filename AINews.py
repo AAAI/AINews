@@ -59,7 +59,7 @@ import os
 import getopt
 import locale
 
-from AINewsConfig import config
+from AINewsConfig import config, paths
 from AINewsCrawler import AINewsCrawler
 from AINewsSVM import AINewsSVM
 from AINewsRanker import AINewsRanker
@@ -109,7 +109,7 @@ def usage():
     
     
 def crawl(opts):
-    file = "output/submit_news.xml"
+    file = paths['ainews.output'] + "submit_news.xml"
     sn = AINewsSubmitNews()
     sn.process(file)
 
@@ -153,8 +153,9 @@ def publish():
     
 def publish_daily():
     publisher = AINewsPublisher()
-    #publisher.generate_email_output()
-    #publisher.generate_pmwiki_output()
+    publisher.generate_standard_output()
+    publisher.generate_email_output()
+    publisher.generate_pmwiki_output()
     #publisher.publish_email_daily()
     #publisher.publish_pmwiki_daily()
     #publisher.update_rss()
