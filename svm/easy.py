@@ -8,28 +8,10 @@ if len(sys.argv) <= 1:
 	print('Usage: %s training_file [testing_file]' % sys.argv[0])
 	raise SystemExit
 
-# svm, grid, and gnuplot executable files
-
-is_win32 = (sys.platform == 'win32')
-if not is_win32:
-	svmscale_exe = "libsvm-2.91/svm-scale"
-	svmtrain_exe = "libsvm-2.91/svm-train"
-	svmpredict_exe = "libsvm-2.91/svm-predict"
-	grid_py = "./grid.py"
-	gnuplot_exe = "/usr/bin/gnuplot"
-else:
-        # example for windows
-	svmscale_exe = r"..\windows\svm-scale.exe"
-	svmtrain_exe = r"..\windows\svm-train.exe"
-	svmpredict_exe = r"..\windows\svm-predict.exe"
-	gnuplot_exe = r"c:\tmp\gnuplot\bin\pgnuplot.exe"
-	grid_py = r".\grid.py"
-
-assert os.path.exists(svmscale_exe),"svm-scale executable not found"
-assert os.path.exists(svmtrain_exe),"svm-train executable not found"
-assert os.path.exists(svmpredict_exe),"svm-predict executable not found"
-assert os.path.exists(gnuplot_exe),"gnuplot executable not found"
-assert os.path.exists(grid_py),"grid.py not found"
+svmscale_exe = "svm-scale"
+svmtrain_exe = "svm-train"
+svmpredict_exe = "svm-predict"
+grid_py = "./grid.py"
 
 train_pathname = sys.argv[1]
 assert os.path.exists(train_pathname),"training file not found"
@@ -78,3 +60,4 @@ if len(sys.argv) > 2:
 	Popen(cmd, shell = True).communicate()	
 
 	print('Output prediction: %s' % predict_test_file)
+

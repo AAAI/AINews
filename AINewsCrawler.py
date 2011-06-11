@@ -16,7 +16,7 @@ from datetime import date, timedelta
 
 from AINewsConfig import config, paths, \
      whitelist_bigrams, whitelist_unigrams, whitelist_trigrams
-from AINewsTools import savefile, loadcsv, strip_html, savepickle, loadfile
+from AINewsTools import savefile, loadcsv, strip_html, savepickle, loadfile, trunc
 from AINewsParser import AINewsParser
 from AINewsSourceParser import *
 from AINewsTextProcessor import AINewsTextProcessor
@@ -54,7 +54,7 @@ class AINewsCrawler:
         
         # classifier topic
         #self.topic = AINewsTopic()
-        model_dir = "category/centroid/"
+        model_dir = paths['ainews.category_data'] + "centroid/"
         self.classifier = AINewsCentroidClassifier()
         self.classifier.init_predict(model_dir)
         
@@ -106,11 +106,11 @@ class AINewsCrawler:
             for candidate in parser.candidates:
                 if len(candidate) != 5: continue
                 url         = candidate[0]
-                title       = re.sub(r'\s+', ' ', candidate[1])
+                title       = (re.sub(r'\s+', ' ', candidate[1])).encode('ascii', 'ignore')
                 pub_date    = candidate[2]
-                desc        = re.sub(r'\s+', ' ', candidate[3])
-                text        = candidate[4]
-                if self.debug: print "Considering %s (%s)" % (title, url)
+                desc        = (re.sub(r'\s+', ' ', candidate[3])).encode('ascii', 'ignore')
+                text        = candidate[4].encode('ascii', 'ignore')
+                if self.debug: print "Considering \"%s\"" % (trunc(title, max_pos=40))
                 if not self.contain_whiteterm(text): continue
                 if isinstance(desc, types.StringType):
                     desc = unicode(desc, errors = 'ignore')
@@ -118,8 +118,7 @@ class AINewsCrawler:
                     title = unicode(title, errors = 'ignore')
                 
                 wordfreq=self.textprocessor.simpletextprocess(text)
-                #topic = self.topic.find_topic(wordfreq)
-                topic = ""
+                topic = 'NotRelated' # default topic; will change below
                 urlid = self.add_urlmeta(url, len(wordfreq), tag, \
                         topic,pub_date, self.today, publisher, title, desc)
                 if urlid == None: continue
@@ -143,11 +142,8 @@ class AINewsCrawler:
                 # Save to file
                 self.save(urlid, url, str(pub_date), title, desc, text)
                 if self.debug:
-                    try:
-                        print """*{ID:%d} %s (%s - %s)\n\t%s\n\t%s\n\n""" % \
-                            (urlid, title, str(pub_date), topic, url, desc )
-                    except UnicodeError:
-                        pass
+                    print """*{ID:%d} %s (%s - %s)\n\t%s\n\t%s\n\n""" % \
+                        (urlid, title, str(pub_date), topic, url, desc )
                 
                
     def crawl_url(self, url):

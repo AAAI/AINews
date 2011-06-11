@@ -12,17 +12,7 @@ if(sys.hexversion < 0x03000000):
 else:
 	import queue as Queue
 
-
-# svmtrain and gnuplot executable
-
-is_win32 = (sys.platform == 'win32')
-if not is_win32:
-       svmtrain_exe = "libsvm-2.91/svm-train"
-       gnuplot_exe = "/usr/bin/gnuplot"
-else:
-       # example for windows
-       svmtrain_exe = r"..\windows\svm-train.exe"
-       gnuplot_exe = r"c:\tmp\gnuplot\bin\pgnuplot.exe"
+svmtrain_exe = "svm-train"
 
 # global parameters and their default values
 
@@ -45,11 +35,11 @@ def process_options(argv=sys.argv):
     global c_begin, c_end, c_step
     global g_begin, g_end, g_step
     global dataset_pathname, dataset_title, pass_through_string
-    global svmtrain_exe, gnuplot_exe, gnuplot, out_filename, png_filename
+    global svmtrain_exe, out_filename, png_filename
     
     usage = """\
 Usage: grid.py [-log2c begin,end,step] [-log2g begin,end,step] [-v fold] 
-[-svmtrain pathname] [-gnuplot pathname] [-out pathname] [-png pathname]
+[-svmtrain pathname] [-out pathname] [-png pathname]
 [additional parameters for svm-train] dataset"""
 
     if len(argv) < 2:
@@ -80,9 +70,6 @@ Usage: grid.py [-log2c begin,end,step] [-log2g begin,end,step] [-v fold]
         elif argv[i] == '-svmtrain':
             i = i + 1
             svmtrain_exe = argv[i]
-        elif argv[i] == '-gnuplot':
-            i = i + 1
-            gnuplot_exe = argv[i]
         elif argv[i] == '-out':
             i = i + 1
             out_filename = argv[i]
@@ -94,8 +81,6 @@ Usage: grid.py [-log2c begin,end,step] [-log2g begin,end,step] [-v fold]
         i = i + 1
 
     pass_through_string = " ".join(pass_through_options)
-    assert os.path.exists(svmtrain_exe),"svm-train executable not found"    
-    assert os.path.exists(gnuplot_exe),"gnuplot executable not found"
     assert os.path.exists(dataset_pathname),"dataset not found"
     #gnuplot = Popen(gnuplot_exe,stdin = PIPE).stdin
 

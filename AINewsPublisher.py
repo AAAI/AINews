@@ -14,7 +14,7 @@ from subprocess import *
 from datetime import date, datetime, timedelta
 from operator import itemgetter
 from AINewsTools import loadpickle, savefile,savepickle
-from AINewsConfig import config, aitopic_urls
+from AINewsConfig import config, paths, aitopic_urls
 
 class AINewsPublisher():
     def __init__(self):
@@ -27,7 +27,7 @@ class AINewsPublisher():
            "Representation":13, "Robots":14, "ScienceFiction":15,"Speech":16,
            "Systems":17,  "Vision":18}
 
-        topnews_unfiltered = loadpickle("output/topnews.pkl")
+        topnews_unfiltered = loadpickle(paths['ainews.output'] + "topnews.pkl")
         ## filter topnews, so as to select only a few stories from each topic
         stories_per_topic = int(config['publisher.stories_per_topic'])
         self.topnews = []
@@ -37,7 +37,7 @@ class AINewsPublisher():
         self.topnews = sorted(self.topnews, key=itemgetter('score'), reverse=True)
         
         currmonth = self.today.strftime("%Y-%m")
-        p = "output/monthly/" + currmonth
+        p = paths['ainews.output'] + "monthly/" + currmonth
         if not path.exists(p):
             mkdir(p)
         savepickle(p+"/"+self.today.strftime("%d"), self.topnews)
@@ -53,7 +53,7 @@ class AINewsPublisher():
             std_output += """%f\t(%d) %s - (%s)\n%s\t%s\n\n""" \
                       % (news['score'], news['urlid'], news['title'], \
                          news['pubdate'], news['topic'], news['url'])
-        savefile("output/std_output.txt", std_output.encode('utf-8'))
+        savefile(paths['ainews.output'] + "std_output.txt", std_output.encode('utf-8'))
         
         
     
@@ -176,7 +176,7 @@ class AINewsPublisher():
                 <TR><TD><span style="color: #5E5E5E;">
         <div style="width=100%; clear:both"> </div>
         """
-        savefile("output/email_output.txt", email_output.encode('utf-8'))
+        savefile(paths['ainews.output'] + "email_output.txt", email_output.encode('utf-8'))
         self.semiauto_email_output = email_output
         
     def generate_pmwiki_output(self):
@@ -294,8 +294,8 @@ Note: Placement of an item inside AINews is dependent on that item's tags. Speci
         """
         pmwiki_output += footer
         pmwiki_output_norater += footer
-        savefile("output/pmwiki_output.txt", pmwiki_output.encode('utf-8'))
-        savefile("output/pmwiki_output_norater.txt", pmwiki_output_norater.encode('utf-8'))
+        savefile(paths['ainews.output'] + "pmwiki_output.txt", pmwiki_output.encode('utf-8'))
+        savefile(paths['ainews.output'] + "pmwiki_output_norater.txt", pmwiki_output_norater.encode('utf-8'))
         
         
         # Generate the metadata PmWiki page for every AIArticles
@@ -332,8 +332,8 @@ Note: Placement of an item inside AINews is dependent on that item's tags. Speci
 (:tableend:)
 (:collections :) brokenlinkform:brokenlink""" \
                 % (news['url'], news['title'], news['desc'], news['pubdate'].strftime("%B %d, %Y"), news['publisher'], news['topic'])
-            savefile("output/aiarticles/%d" % news['urlid'], output.encode('utf-8'))
-        savefile("output/urlids_output.txt", urlids_output)
+            savefile(paths['ainews.output'] + "aiarticles/%d" % news['urlid'], output.encode('utf-8'))
+        savefile(paths['ainews.output'] + "urlids_output.txt", urlids_output)
                             
         
         # Generate monthly summary in HTML code
@@ -385,8 +385,8 @@ pageTracker._trackPageview();
       <ul>"""
         monthlynews = []
         i = 0
-        for infile in glob( path.join("output/monthly/"+self.today.strftime("%Y-%m"), '*') ):
-            currnews = loadpickle("output/topnews.pkl")
+        for infile in glob( path.join(paths['ainews.output'] + "monthly/"+self.today.strftime("%Y-%m"), '*') ):
+            currnews = loadpickle(paths['ainews.output'] + "topnews.pkl")
             monthlynews += currnews
             output += """<li><font size="2" face="Arial"><strong>%s articles</strong></font> <font size="2" face="Arial"><strong>posted during the week of %s %s</strong> <strong>%s </strong>""" % (month_str, month_str, path.basename(infile), year_str)
             for news in currnews:
@@ -420,7 +420,7 @@ pageTracker._trackPageview();
 
 <!-- InstanceEnd --></html>
 """ 
-        savefile("../../html/archive"+year_str+self.today.strftime("%m")+".html", output.encode('utf-8'))
+        savefile(paths['ainews.html'] + "archive"+year_str+self.today.strftime("%m")+".html", output.encode('utf-8'))
         
         
     def publish_email(self):
@@ -454,7 +454,7 @@ pageTracker._trackPageview();
         </body>
         </html>
         """ % ("AI Alert - "+str(self.today.strftime("%B %d, %Y")), self.semiauto_email_output)
-        savefile("../../html/semiauto_email.html", semiauto.encode('utf-8'))
+        savefile(paths['ainews.html'] + "semiauto_email.html", semiauto.encode('utf-8'))
 
     def publish_email_daily(self):
         """
@@ -492,7 +492,7 @@ pageTracker._trackPageview();
                                 news['pubdate'].month, news['pubdate'].day)
                             ))
             
-        rssfile = "../../xml/rss/news.xml"
+        rssfile = paths['ainews.rss'] + "news.xml"
         publish_rss(rssfile, rssitems)
         
         
@@ -513,7 +513,7 @@ pageTracker._trackPageview();
                                 ))
             
         for i in range(len(topicrsses)):
-            rssfile = "../../xml/rss/"+topicrsses[i]+'.xml'
+            rssfile = paths['ainews.rss'] + topicrsses[i]+'.xml'
             if len(topicitems[i]) != 0:
                 publish_rss(rssfile, topicitems[i])
         

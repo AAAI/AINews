@@ -145,8 +145,8 @@ def rank():
 def publish():
     publisher = AINewsPublisher()
     publisher.generate_standard_output()
-    #publisher.generate_email_output()
-    #publisher.generate_pmwiki_output()
+    publisher.generate_email_output()
+    publisher.generate_pmwiki_output()
     #publisher.publish_email()
     #publisher.publish_pmwiki()
     #publisher.update_rss()
