@@ -14,10 +14,10 @@ news_data = /path/to/news/
 output = /path/to/output/
 
 ; (leave trailing slash)
-html = /path/to/html
+html = /path/to/html/
 
 ; (leave trailing slash)
-rss = /path/to/rss
+rss = /path/to/rss/
 
 stoplist = /path/to/stoplist.txt
 

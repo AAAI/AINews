@@ -21,10 +21,10 @@ fclose($handle);
 // multiple recipients
 $subscribers = $config['email']['subscribers'];
 $sub_array = explode(":", $subscribers);
-$to  = 'Liang Dong <serendipity0306@gmail.com>;' . "\r\n"; 
+$to = "";
 
 foreach($sub_array as $sub){
-	$to .= ";".$sub."\r\n";	
+	$to .= "<$sub>; ";	
 }
 
 

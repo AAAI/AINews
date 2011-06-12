@@ -134,8 +134,8 @@ def publish():
     publisher.generate_email_output()
     publisher.generate_pmwiki_output()
     #publisher.publish_email()
-    #publisher.publish_pmwiki()
-    #publisher.update_rss()
+    publisher.publish_pmwiki()
+    publisher.update_rss()
     
 def main():
     """

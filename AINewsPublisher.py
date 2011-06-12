@@ -198,22 +198,25 @@ def publish_rss(rssfile, rssitems):
     now = datetime.now()
     rss_begindate = now - timedelta(days = 60)
     
-    newstitleset = set()
     f = feedparser.parse(rssfile)
+    urlset = set(map(lambda e: e.link, rssitems))
+
     # remove out-of-date news and add rest of the news into rssitems
     for entry in f.entries:
         if not entry.has_key('updated_parsed'): continue
         d = datetime(entry.date_parsed[0], \
                        entry.date_parsed[1], entry.date_parsed[2])
         if d > now or d < rss_begindate: continue
-        if entry.title in newstitleset: continue
-        else: newstitleset.add(entry.title)
+        if entry.link in urlset: continue
+        urlset.add(entry.link)
         rssitems.append( PyRSS2Gen.RSSItem(
                         title = entry.title,
                         link = entry.link,
                         description = entry.description,
                         guid = PyRSS2Gen.Guid(entry.link),
                         pubDate = d))
+
+    rssitems = sorted(rssitems, key=lambda e: e.pubDate, reverse=True)
     
     # Use PyRSS2Gen to generate the output RSS    
     rss = PyRSS2Gen.RSS2(
@@ -226,4 +229,4 @@ def publish_rss(rssfile, rssitems):
         items = rssitems)
     
     rss.write_xml(open(rssfile, "w"))
-        
+
