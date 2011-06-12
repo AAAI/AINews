@@ -7,8 +7,9 @@
  *
  ******************************************************************************/
 error_reporting(E_ALL ^ E_NOTICE);
-$ini_array = parse_ini_file("config.ini", true);
-$PMWIKI_DIR = $ini_array['pmwiki']['dir'];
+$paths = parse_ini_file("config/paths.ini", true);
+$PMWIKI_DIR = $paths['pmwiki']['dir'];
+$OUTPUT_DIR = $paths['ainews']['output'];
 
 chdir($PMWIKI_DIR);
 
@@ -209,7 +210,7 @@ function CmpPageAttr($a, $b) {
  ****************************************************************************/
 
 # Write Latest News
-$filename = $PMWIKI_DIR."aaai/output/pmwiki_output.txt";
+$filename = $OUTPUT_DIR."pmwiki_output.txt";
 $handle = fopen($filename, "r");
 $output = fread($handle, filesize($filename));
 fclose($handle);
@@ -220,7 +221,7 @@ $page['text'] = $output;
 WritePage($pagename_result, $page);
     
 # Write Today News
-$filename = $PMWIKI_DIR."aaai/output/pmwiki_output_norater.txt";
+$filename = $OUTPUT_DIR."pmwiki_output_norater.txt";
 $handle = fopen($filename, "r");
 $output = fread($handle, filesize($filename));
 fclose($handle);
@@ -264,12 +265,12 @@ if ($i == 0) {
 
 # Add each news into AIArticles
 $year = date("Y");
-$file = $PMWIKI_DIR."aaai/output/urlids_output.txt";
+$file = $OUTPUT_DIR."urlids_output.txt";
 $lines = file($file);
 foreach($lines as $line_num => $id){
  
   $id = trim($id);
-  $filename = $PMWIKI_DIR."aaai/output/aiarticles/".$id;
+  $filename = $OUTPUT_DIR."aiarticles/".$id;
   $handle = fopen($filename, "r");
   $output = fread($handle, filesize($filename));
   fclose($handle);

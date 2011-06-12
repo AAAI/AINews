@@ -10,14 +10,6 @@ debug       = On
 ; period is the # of days for crawling and ranking news
 period      = 7
 
-begin_year = 2011
-begin_month = 05
-begin_day = 30
-
-end_year = 2011
-end_month = 05
-end_day = 19
-
 [parser]
 ; link density ratio is the ratio of #link words to # total words
 ; the parser will remove the whole block content if the ratio is larger than 

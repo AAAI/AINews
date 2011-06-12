@@ -18,7 +18,7 @@ class AINewsRemover():
     def __init__(self):
         self.db = AINewsDB()
         self.today = date.today()
-        self.logpath = "../pub/rater/logs/"
+        #self.logpath = "../pub/rater/logs/"
         
     def remove_by_urlid(self, urlid):
         """
@@ -40,9 +40,9 @@ class AINewsRemover():
         sql = "DELETE FROM urllist WHERE rowid = %d" % urlid
         self.db.execute(sql)
         # Remove rating logs
-        logfile = self.logpath + str(urlid) + ".rating"
-        if os.path.exists(logfile):
-            os.remove(logfile)
+        #logfile = self.logpath + str(urlid) + ".rating"
+        #if os.path.exists(logfile):
+        #    os.remove(logfile)
             
     def remove_by_period(self, period):
         """
@@ -65,4 +65,4 @@ if __name__ == "__main__":
     '''
     remover = AINewsRemover()
     #remover.remove_by_period(period)
-    remover.remove_by_urlid(741)
+    remover.remove_by_urlid(int(sys.argv[1]))

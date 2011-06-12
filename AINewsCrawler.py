@@ -99,53 +99,54 @@ class AINewsCrawler:
             try:
                 parser.parse_sourcepage(sourcepage_url)
                 parser.parse_storypage()
+                for candidate in parser.candidates:
+                    if len(candidate) != 5: continue
+                    url         = candidate[0]
+                    title       = (re.sub(r'\s+', ' ', candidate[1])).encode('ascii', 'ignore')
+                    pub_date    = candidate[2]
+                    desc        = (re.sub(r'\s+', ' ', candidate[3])).encode('ascii', 'ignore')
+                    text        = candidate[4].encode('ascii', 'ignore')
+                    if self.debug: print "Considering \"%s\" (%s)" % \
+                        (trunc(title, max_pos=40), pub_date)
+                    if not self.contain_whiteterm(text): continue
+                    if isinstance(desc, types.StringType):
+                        desc = unicode(desc, errors = 'ignore')
+                    if isinstance(title, types.StringType):
+                        title = unicode(title, errors = 'ignore')
+                    
+                    wordfreq=self.textprocessor.simpletextprocess(text)
+                    topic = 'NotRelated' # default topic; will change below
+                    urlid = self.add_urlmeta(url, len(wordfreq), tag, \
+                            topic,pub_date, self.today, publisher, title, desc)
+                    if urlid == None: continue
+                    self.add_freq_index(wordfreq, 'textwordurl', 'dftext', urlid)
+                
+                
+                    # Update 19 categories
+                    # And RelatedClassifier checks if the news is related or not
+                    topic = self.classifier.predict(urlid)  # 19 category
+                    # Related or Notrelated?
+                    doc_data = self.classifier.get_tfidf(urlid)
+                    isrelated = self.related_classifier.predict(doc_data)
+                    if isrelated < 0:
+                        topic = "NotRelated"
+                    # Update the topic in the database
+                    sql = "update urllist set topic = '%s' where rowid = %d" \
+                            % (topic, urlid)
+                    self.db.execute(sql)
+                        
+                    
+                    # Save to file
+                    self.save(urlid, url, str(pub_date), title, desc, text)
+                    if self.debug:
+                        print """*{ID:%d} %s (%s - %s)\n\t%s\n\t%s\n\n""" % \
+                            (urlid, title, str(pub_date), topic, url, desc )
             except (KeyboardInterrupt):
                 if self.debug: print "Quitting early due to keyboard interrupt."
                 sys.exit()
             except:
                 if self.debug: print "Parser for %s failed." % (publisher)
                 continue;
-            for candidate in parser.candidates:
-                if len(candidate) != 5: continue
-                url         = candidate[0]
-                title       = (re.sub(r'\s+', ' ', candidate[1])).encode('ascii', 'ignore')
-                pub_date    = candidate[2]
-                desc        = (re.sub(r'\s+', ' ', candidate[3])).encode('ascii', 'ignore')
-                text        = candidate[4].encode('ascii', 'ignore')
-                if self.debug: print "Considering \"%s\"" % (trunc(title, max_pos=40))
-                if not self.contain_whiteterm(text): continue
-                if isinstance(desc, types.StringType):
-                    desc = unicode(desc, errors = 'ignore')
-                if isinstance(title, types.StringType):
-                    title = unicode(title, errors = 'ignore')
-                
-                wordfreq=self.textprocessor.simpletextprocess(text)
-                topic = 'NotRelated' # default topic; will change below
-                urlid = self.add_urlmeta(url, len(wordfreq), tag, \
-                        topic,pub_date, self.today, publisher, title, desc)
-                if urlid == None: continue
-                self.add_freq_index(wordfreq, 'textwordurl', 'dftext', urlid)
-                
-                
-                # Update 19 categories
-                # And RelatedClassifier checks if the news is related or not
-                topic = self.classifier.predict(urlid)  # 19 category
-                # Related or Notrelated?
-                doc_data = self.classifier.get_tfidf(urlid)
-                isrelated = self.related_classifier.predict(doc_data)
-                if isrelated < 0:
-                    topic = "NotRelated"
-                # Update the topic in the database
-                sql = "update urllist set topic = '%s' where rowid = %d" \
-                        % (topic, urlid)
-                self.db.execute(sql)
-                    
-                
-                # Save to file
-                self.save(urlid, url, str(pub_date), title, desc, text)
-                if self.debug:
-                    print """*{ID:%d} %s (%s - %s)\n\t%s\n\t%s\n\n""" % \
-                        (urlid, title, str(pub_date), topic, url, desc )
                 
                
     def crawl_url(self, url):

@@ -39,17 +39,10 @@ USAGE:
         (4) publish:
             publish news from output files to Pmwiki site and send emails.
                     
-        (5) publish_daily
-            It is daily publish for testing purpose
-            
-        (6) all:
+        (5) all:
             Automatically processing crawl,train, rank and publish tasks.
             
-        (7) all_daily:
-            Automatically processing crawl,train, rank and publish_daily tasks
-            for testing purpose.
-            
-        View Latest news  at:
+        View Latest news at:
         http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/AINews
         
 """
@@ -90,17 +83,10 @@ def usage():
             publish news from output files to Pmwiki site and send emails.
             It is weekly publish to the public.
             
-        (5) publish_daily
-            It is daily publish for testing purpose
-            
-        (6) all:
+        (5) all:
             Automatically processing crawl,train, rank and publish tasks.
             
-        (7) all_daily:
-            Automatically processing crawl,train, rank and publish_daily tasks
-            for testing purpose.
-            
-        View Latest news  at:
+        View Latest news at:
         http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/AINews
             
         """
@@ -151,15 +137,6 @@ def publish():
     #publisher.publish_pmwiki()
     #publisher.update_rss()
     
-def publish_daily():
-    publisher = AINewsPublisher()
-    publisher.generate_standard_output()
-    publisher.generate_email_output()
-    publisher.generate_pmwiki_output()
-    #publisher.publish_email_daily()
-    #publisher.publish_pmwiki_daily()
-    #publisher.update_rss()
-    
 def main():
     """
     Main function of AINews.py
@@ -167,13 +144,7 @@ def main():
     # Set en_US, UTF8
     locale.setlocale(locale.LC_ALL,'en_US.UTF-8')
     
-    # Add local python library path into PYTHONPATH
-    sys.path.append('/home/glick/lib/python')
-    
-    
-    
-    commands_list = ("crawl", "train", "rank", "publish", "publish_daily", \
-                     "all", "all_daily", "help")
+    commands_list = ("crawl", "train", "rank", "publish", "all", "help")
     try:
         if len(sys.argv) < 2 or sys.argv[1] not in commands_list:
             usage()
@@ -198,21 +169,13 @@ def main():
     elif command == "publish":
         publish()
         
-    elif command == "publish_daily":
-        publish_daily()
-        
     elif command == "all":
         crawl(opts)
         train()
         rank()
         publish()
     
-    elif command == "all_daily":
-        crawl(opts)
-        train()
-        rank()
-        publish_daily()
-        
 
 if __name__ == "__main__":
     main()
+

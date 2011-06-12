@@ -22,6 +22,7 @@ sys.path.append(paths['templates.compiled'])
 from LatestNewsTxt import LatestNewsTxt
 from LatestNewsEmail import LatestNewsEmail
 from LatestNewsPmWiki import LatestNewsPmWiki
+from ArticlePmWiki import ArticlePmWiki
 
 class AINewsPublisher():
     def __init__(self):
@@ -105,6 +106,16 @@ class AINewsPublisher():
         pmwiki.rater = False
         savefile(paths['ainews.output'] + "pmwiki_output_norater.txt", str(pmwiki))
 
+        # Generate wiki metadata page for each article
+        urlids_output = ""
+        for news in self.topnews:
+            urlids_output += str(news['urlid']) + '\n'
+            article = ArticlePmWiki()
+            article.n = news
+            savefile(paths['ainews.output'] + "aiarticles/%d" % news['urlid'], str(article))
+
+        savefile(paths['ainews.output'] + "urlids_output.txt", urlids_output)
+
     def publish_email(self):
         """
         Call AINewsEmail.php to send email through PHP Mail Server
@@ -137,27 +148,11 @@ class AINewsPublisher():
         """ % ("AI Alert - "+str(self.today.strftime("%B %d, %Y")), self.semiauto_email_output)
         savefile(paths['ainews.html'] + "semiauto_email.html", semiauto.encode('utf-8'))
 
-    def publish_email_daily(self):
-        """
-        Call AINewsEmailDaily.php to send email through PHP Mail Server by daily
-        for testing purpose.
-        """
-        cmd = 'php AINewsEmailDaily.php'
-        Popen(cmd, shell = True, stdout = PIPE).communicate()
-
     def publish_pmwiki(self):
         """
         Call AINewsPmwiki.php to publish latest news to AAAI Pmwiki website.
         """
         cmd = 'php AINewsPmwiki.php'
-        Popen(cmd, shell = True, stdout = PIPE).communicate()
-        
-    def publish_pmwiki_daily(self):
-        """
-        Call AINewsPmwikiDaily.php to publish latest news to AAAI Pmwiki website
-        for testing purpose.
-        """
-        cmd = 'php AINewsPmwikiDaily.php'
         Popen(cmd, shell = True, stdout = PIPE).communicate()
         
     def update_rss(self):

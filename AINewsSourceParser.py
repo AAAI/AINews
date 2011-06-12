@@ -933,26 +933,19 @@ class NatureParser(AINewsParser):
         except Exception, error:
             if self.debug: print >> sys.stderr, "SOUP ERROR: %s" % error
             return False
-        mainmysoup = self.soup.find('div', {'id': "content"})
-        self.remove_tag(mainmysoup,'form')
-        mainmysoup = mainmysoup.find('ol')
+        mainmysoup = self.soup.find('ol', {'class': "results-list"})
         mysoups = mainmysoup.findAll('li')
         for mysoup in mysoups:
             titlesoup = mysoup.find('h2')
             item = titlesoup.find('a',href=True)
-            if item == None: continue
+            # an "access" span element indicates "free"
+            access = titlesoup.find('span', {'class': 'access'})
+            if item == None or access == None: continue
             url  = item['href']
             title = self.extract_genenraltext(item).strip()
             if title == 'News in brief': continue
-            info = mysoup.find('p', {'class':'journal'})
-            s = self.extract_genenraltext(info)
-            m = re.search(dateformat_regexps['DD Month YYYY'][0], s)
-            if m != None:
-                date_str = m.group(0)
-                d = self.parse_date(date_str,'DD Month YYYY')
-                if d > self.today or d < self.begindate: continue
-            else:
-                d = self.today
+            date_str = mysoup.find('span', {'class': 'date'}).content
+            d = self.extract_date(date_str)
             self.candidates.append([url, title, d])
             
     def parse_storypage(self):
@@ -964,13 +957,9 @@ class NatureParser(AINewsParser):
             except Exception, error:
                 print >> sys.stderr, "SOUP ERROR: %s" % error
                 continue
-            mainsoup = self.soup.find("div", {"id" : "content"})
+            mainsoup = self.soup.find("div", {"class" : "content"})
             if mainsoup == None: continue
-            self.remove_tag(mainsoup, 'span')
-            self.remove_tag(mainsoup, 'div', 'class', 'top-links')
-            self.remove_tag(mainsoup, 'p', 'class', 'email')
-            self.remove_tag(mainsoup, 'p', 'class', 'credit')
-            self.remove_tag(mainsoup, 'div', 'id', 'supplementary-information')
+            self.remove_tag(mainsoup, 'div', 'class', 'article-tools')
             mysoups = mainsoup.findAll('p')
             text = ""
             for mysoup in mysoups:
@@ -1070,8 +1059,17 @@ class PCWorldParser(AINewsParser):
             url  = item['href']
             if url[0] == '/':
                 url = 'http://www.pcworld.com'+url
-            title = self.extract_genenraltext(item)
-            d = self.today
+            res = self.parse_url(url)
+            if not res: continue
+            try:
+                soup = BeautifulSoup(self.html)
+                date_container = soup.find("p", {"class" : "byline"})
+                date_str = date_container.contents[0]
+                if date_str == None: d = self.today
+                else: d = self.extract_date(date_str)
+                title = soup.find("h1").string
+            except: continue
+            if d == None: d = self.today
             self.candidates.append([url, title, d])
             
     def parse_storypage(self):
@@ -1835,9 +1833,20 @@ class IEEESpectrumRSSParser(AINewsParser):
     def parse_sourcepage(self, rss_url):
         f = feedparser.parse(rss_url)
         for entry in f.entries:
-            # dates not available, so don't choose today
-            d = date.today()
+            # dates not available, so follow the link to find the date
             url = entry.link
+            res = self.parse_url(url)
+            if not res:
+                continue
+            try:
+                soup = BeautifulSoup(self.html)
+                date_container = soup.find("p", {"class" : "articleBodyTtl"})
+                date_str = date_container.contents[1]
+                d = self.extract_date(date_str)
+            except:
+                continue
+            if d == None:
+                continue
             title = entry.title
             self.candidates.append([url, title, d])
                 
