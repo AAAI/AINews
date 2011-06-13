@@ -24,9 +24,8 @@ $sub_array = explode(":", $subscribers);
 $to = "";
 
 foreach($sub_array as $sub){
-	$to .= "<$sub>; ";	
+	$to .= "$sub, ";	
 }
-
 
 // subject
 $today = date("D, F j, Y");
@@ -41,5 +40,5 @@ $headers .= 'From: AI Alert<admin11@aaai.org>' . "\r\n";
 
 
 // Mail it
-mail($to, $subject, $message, $headers);
+print mail($to, $subject, $message, $headers);
 ?>

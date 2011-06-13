@@ -121,7 +121,7 @@ class AINewsPublisher():
         Call AINewsEmail.php to send email through PHP Mail Server
         """
         cmd = 'php AINewsEmail.php'
-        Popen(cmd, shell = True, stdout = PIPE).communicate()
+        Popen(cmd, shell = True, stdout = PIPE, stderr = STDOUT).communicate()
         self.publish_email_semiauto()
         
     def publish_email_semiauto(self):
@@ -146,7 +146,7 @@ class AINewsPublisher():
         </body>
         </html>
         """ % ("AI Alert - "+str(self.today.strftime("%B %d, %Y")), self.semiauto_email_output)
-        savefile(paths['ainews.html'] + "semiauto_email.html", semiauto.encode('utf-8'))
+        savefile(paths['ainews.html'] + "semiauto_email.html", semiauto)
 
     def publish_pmwiki(self):
         """
