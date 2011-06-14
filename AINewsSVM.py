@@ -53,7 +53,6 @@ class AINewsSVM:
         rater_count_cutoff = int(config['feedback.rater_count_cutoff'])
         stdev_cutoff  = float(config['feedback.stdev_cutoff'])
         output = ""
-        #admins = ("Bgbuchanan's", "Rgsmith's", "Ldong's")
         admins = [name + '\'s' for name in config['svm.admins'].split(':')]
         for infile in glob.glob( path.join(feedback_path, '*.rating') ):
             urlid = int(infile.split('/')[-1][:-7])
@@ -73,7 +72,7 @@ class AINewsSVM:
             self.db.execute(sql)
             
             if False:
-                # Deprecated. Dr.Buchanan wants only his and Dr.Reids' rating
+                # Deprecated. Dr.Buchanan wants only admin ratings
                 # be used in re-training
                 if n <= rater_count_cutoff: continue
                 rates = []
@@ -84,7 +83,7 @@ class AINewsSVM:
                 if sd > stdev_cutoff: continue
                 newsscore = mean
             else:
-                # Only use Dr.Buchanan and Dr.Reids' rating for re-training
+                # Only use admin ratings for re-training
                 admincount = 0
                 adminsum = 0
                 for line in lines:
@@ -186,9 +185,9 @@ class AINewsSVM:
         @type pos_range: C{tuple}
         """
         # Generate the specific input format file
-        self.__generate_libsvm_input(pos_range,  filename)
+        self.__generate_libsvm_input(pos_range,  paths['svm.svm_data'] + filename)
         # Using the input file to train SVM
-        self.__libsvm_train(filename)
+        self.__libsvm_train(paths['svm.svm_data'] + filename)
         
     def train_all(self):
         """
@@ -223,7 +222,7 @@ class AINewsSVM:
             for wordid in sorted(self.allnews[urlid].keys()):
                 line += ' '+str(wordid)+':'+str(self.allnews[urlid][wordid])
             content += line + '\n'
-        savefile('svm/'+filename, content)
+        savefile(filename, content)
     
     def __libsvm_train(self,filename):
         """
@@ -234,7 +233,7 @@ class AINewsSVM:
         @type filename: C{string}
         """
         cmd = 'python svm-easy.py "%s"' % filename
-        Popen(cmd, shell = True, stdout = PIPE).communicate()
+        Popen(cmd, shell = True).wait()
             
       
     
@@ -290,14 +289,18 @@ class AINewsSVM:
         """
         svm_path = paths['svm.svm_data']
         mysvm = svm_load_model(svm_path + filename + ".model")
+        # figure out which label is +1
+        labels = mysvm.get_labels()
+        if labels[0] == 1: positive_idx = 0
+        else: positive_idx = 1
         self.__load_range(svm_path + filename + ".range")
         results = []
         for urlid in urlids:
             data = self.__retrieve_url_tfidf(urlid)
             p = svm_predict([0], [data], mysvm, "-b 1")
             # p = ([1.0], _, [[0.62317989329642587 0.3768201067035743]])
-            # where the first prob is for -1, the second for 1
-            results.append(p[2][0][1])
+            # where the first prob is labels[0] and second is labels[1]
+            results.append(p[2][0][positive_idx])
         return results
     
         
@@ -379,8 +382,9 @@ class AINewsSVM:
         savefile(paths['svm.svm_data'] + 'IsRelated', content)
         
         # use libsvm command tool to train
-        cmd = 'python svm-easy.py IsRelated'
-        Popen(cmd, shell = True, stdout = PIPE).communicate()
+        print "Training 'is related'..."
+        cmd = 'python svm-easy.py "' + paths['svm.svm_data'] + 'IsRelated"'
+        Popen(cmd, shell = True).wait()
             
     def get_related(self, urlid):
         sql = "select topic from urllist where rowid = %d" % urlid

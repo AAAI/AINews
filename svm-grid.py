@@ -47,9 +47,8 @@ Usage: grid.py [-log2c begin,end,step] [-log2g begin,end,step] [-v fold]
         sys.exit(1)
 
     dataset_pathname = argv[-1]
-    dataset_title = os.path.split(dataset_pathname)[1]
-    out_filename = '%s.out' % dataset_title
-    png_filename = '%s.png' % dataset_title
+    out_filename = '%s.out' % dataset_pathname
+    png_filename = '%s.png' % dataset_pathname
     pass_through_options = []
 
     i = 1

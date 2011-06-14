@@ -120,8 +120,8 @@ class AINewsPublisher():
         """
         Call AINewsEmail.php to send email through PHP Mail Server
         """
-        cmd = 'php AINewsEmail.php'
-        Popen(cmd, shell = True, stdout = PIPE, stderr = STDOUT).communicate()
+        #cmd = 'php AINewsEmail.php'
+        #Popen(cmd, shell = True, stdout = PIPE, stderr = STDOUT).communicate()
         self.publish_email_semiauto()
         
     def publish_email_semiauto(self):
@@ -153,7 +153,7 @@ class AINewsPublisher():
         Call AINewsPmwiki.php to publish latest news to AAAI Pmwiki website.
         """
         cmd = 'php AINewsPmwiki.php'
-        Popen(cmd, shell = True, stdout = PIPE).communicate()
+        Popen(cmd, shell = True).wait()
         
     def update_rss(self):
         rssitems = []
