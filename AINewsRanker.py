@@ -51,10 +51,10 @@ class AINewsRanker:
                           float(config['ranker.mild_relevent_score']), \
                           float(config['ranker.no_relevent_score']) )
         self.sim = AINewsSim()
-        source_order = config['ranker.source_order'].split(':')
-        N = len(source_order)
+        self.source_order = config['ranker.source_order'].split(':')
+        N = len(self.source_order)
         self.srcscores = {}
-        for i, src in enumerate(source_order):
+        for i, src in enumerate(self.source_order):
             self.srcscores[src] = (N-i) * 10
             
         
@@ -84,6 +84,12 @@ class AINewsRanker:
         row = self.db.selectone(sql)
         if row == None: return 0
         else: return row[0]
+
+    def get_word(self, wordid):
+        sql = "select word from wordlist where rowid = %d" % wordid
+        row = self.db.selectone(sql)
+        if row == None: return ""
+        else: return row[0]
         
     def rank(self):
         """
@@ -91,6 +97,10 @@ class AINewsRanker:
         @return: a dictionary of key:urlid, value:score.
         @rtype: C{dict}
         """
+        # For each url, keep a transcript (string) of various
+        # scoring changes made to it
+        transcript = {}
+
         # Get SVM classifier's probability for news candidates
         scores = {}
         candidate_urlids = self.get_candidates()
@@ -112,19 +122,34 @@ class AINewsRanker:
         rows = self.svm.predict_probability_all(urlids)
         for (i,row) in enumerate(rows):
             urlid = row[0]
+            transcript[urlid] = []
 
             rs = self.relscores[2]
             if row[1] > row[2]:
                 if row[1] > row[3]:
                     rs = self.relscores[0]
                     scores[urlid] = rs * 10000
+                    transcript[urlid].append("Relevance score is 'most relevant'")
+                    transcript[urlid].append( \
+                        "Starting score at config'd relevance score %.1f * 10000 = %.1f" % \
+                        (rs, scores[urlid]))
                     if urlid in simnews.keys():
                         scores[urlid]+= len(simnews[urlid])*10
+                        transcript[urlid].append( \
+                            "Added 10*%d to score because %d stories are similar = %.1f" % \
+                            (len(simnews[urlid]), len(simnews[urlid]), scores[urlid]))
             elif row[2] > row[3]:
                 rs = self.relscores[1]
                 scores[urlid] = rs * 10000
+                transcript[urlid].append("Relevance score is 'mildly relevant'")
+                transcript[urlid].append( \
+                    "Starting score at config'd relevance score %.1f * 10000 = %.1f" % \
+                    (rs, scores[urlid]))
                 if urlid in simnews.keys():
-                        scores[urlid]+= len(simnews[urlid])*10
+                    scores[urlid]+= len(simnews[urlid])*10
+                    transcript[urlid].append( \
+                        "Added 10*%d to score because %d stories are similar = %.1f" % \
+                        (len(simnews[urlid]), len(simnews[urlid]), scores[urlid]))
 
             sql = "UPDATE urllist SET svmscore = %f WHERE rowid = %d" \
                     % (rs, urlid)
@@ -143,7 +168,16 @@ class AINewsRanker:
             self.db.execute(sql)
         '''
         for urlid in scores.keys():
-            scores[urlid] += self.count_whitelist(urlid) * 100 
+            words = self.count_whitelist(urlid)
+            cnt = sum(words.values())
+            scores[urlid] += cnt * 100
+            wordlist = []
+            for w in words.keys():
+                wordlist.append("'%s': %d" % (w, words[w]))
+            transcript[urlid].append("Whitelist occurrences: %s" % ", ".join(wordlist))
+            transcript[urlid].append( \
+                "Adding %d*100 to score due to %d total occurrences of whitelist words = %.1f" % \
+                (cnt, cnt, scores[urlid]))
        
         
         # rank by publisher source
@@ -151,8 +185,14 @@ class AINewsRanker:
             pub_src = self.get_publisher(urlid)
             if pub_src in self.srcscores.keys():
                 scores[urlid] += self.srcscores[pub_src]
+                transcript[urlid].append("Adding to score publisher's importance (+%d, position %d/%d in the list) = %.1f" % \
+                    (self.srcscores[pub_src], self.source_order.index(pub_src), \
+                     len(self.source_order), scores[urlid]))
             else:
                 scores[urlid] += len(self.srcscores.keys())*5 # *10/2
+                transcript[urlid].append( \
+                    "Adding to score standard (minor) publisher's importance score (%d) = %.1f" % \
+                    (len(self.srcscores.keys())*5, scores[urlid]))
         
         
         # output into pkl file which is ready for publishing.
@@ -161,6 +201,7 @@ class AINewsRanker:
         for (urlid, score) in sscores[:self.rank_cutoff]:
             info = self.get_urlinfo(urlid)
             info['score'] = score
+            info['transcript'] = transcript[urlid]
             topnews.append(info)
         savepickle(paths['ainews.output'] + "topnews.pkl", topnews)
     
@@ -231,20 +272,22 @@ class AINewsRanker:
         @param urlid: urlid 
         @type urlid: C{int}
         """
-        sql = """select url, pubdate, title, publisher, topic, description
+        sql = """select url, pubdate, crawldate, title, publisher, topic, description,
+                        initsvm, svmscore, rate, adminrate, ratesd, ratecount
                 from urllist where rowid = %d""" % urlid
         row = self.db.selectone(sql)
-        if row[5] == None:
+        if row[6] == None:
             desc_file = paths['ainews.news_data'] + 'desc/'+str(urlid)+'.pkl'
             desc = loadpickle(desc_file).strip()
         else:
-            desc = unescape(row[5])
+            desc = unescape(row[6])
         if isinstance(desc, types.StringType):
             desc = unicode(desc, errors = 'ignore')
         url = unescape(row[0])
-        newsinfo = {'urlid': urlid, 'url' : url, 'pubdate' : row[1], 
-                'title' : row[2], 'publisher' : row[3], 'topic': row[4],
-                'desc': desc}
+        newsinfo = {'urlid': urlid, 'url': url, 'pubdate': row[1], 'crawldate': row[2],
+                'title': row[3], 'publisher': row[4], 'topic': row[5],
+                'desc': desc, 'initsvm': row[7], 'svmscore': row[8],
+                'rate': row[9], 'adminrate': row[10], 'ratesd': row[11], 'ratecount': row[12]}
         return newsinfo
     
     def get_publisher(self, urlid):
@@ -257,6 +300,10 @@ class AINewsRanker:
         row = self.db.selectone(sql)
         return row[0]
         
+    ## TODO: This is broken; bigrams and trigrams aren't counted properly;
+    ## the bigram "hello world" need not occur together (as a bigram) in
+    ## order for this function count it (count will be min occurrence of
+    ## hello and world, independently)
     def count_whitelist(self, urlid):
         sql = "select wordid, freq from textwordurl where urlid = %d" % urlid
         rows = self.db.selectall(sql)
@@ -264,17 +311,21 @@ class AINewsRanker:
         for row in rows:
             data[row[0]] = int(row[1])
         
-        cnt = 0
+        words = {}
         for unigram in self.unigrams:
+            word = self.get_word(unigram)
             if unigram in data.keys():
-                cnt += data[unigram]
+                words[word] = data[unigram]
         for bigram in self.bigrams:
+            word = self.get_word(bigram[0]) + " " + self.get_word(bigram[1])
             if bigram[0] in data.keys() and bigram[1] in data.keys():
-                cnt += min(data[bigram[0]], data[bigram[1]])
+                words[word] = min(data[bigram[0]], data[bigram[1]])
         for trigram in self.trigrams:
+            word = self.get_word(trigram[0]) + " " + self.get_word(trigram[1]) + \
+                " " + self.get_word(trigram[2])
             if trigram[0] in data.keys() and trigram[1] in data.keys() \
                and trigram[2] in data.keys():
-                cnt += min(data[trigram[0]], data[trigram[1]], data[trigram[2]])
-        return cnt
+                words[word] = min(data[trigram[0]], data[trigram[1]], data[trigram[2]])
+        return words
                 
   
