@@ -228,14 +228,14 @@ class AINewsCentroidClassifier:
         data = self.get_tfidf(urlid)
         max_sim = 0
         max_i = 0
+        similarities = {}
         for (i, model) in enumerate(self.models):
             sim = self.cos_sim(data, model)
-            #print '\t', self.categories[i], sim
+            similarities[self.categories[i]] = sim
             if sim > max_sim:
                 max_i = i
                 max_sim = sim
-        if debug: print urlid, self.categories[max_i], max_sim
-        return self.categories[max_i]
+        return (self.categories[max_i], similarities)
         
     def cos_sim(self, data, centroid):
         '''

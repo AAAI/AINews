@@ -124,7 +124,7 @@ class AINewsCrawler:
                 
                     # Update 19 categories
                     # And RelatedClassifier checks if the news is related or not
-                    topic = self.classifier.predict(urlid)  # 19 category
+                    (topic, topicsims) = self.classifier.predict(urlid)
                     # Related or Notrelated?
                     doc_data = self.classifier.get_tfidf(urlid)
                     isrelated = self.related_classifier.predict(doc_data)
@@ -137,7 +137,7 @@ class AINewsCrawler:
                         
                     
                     # Save to file
-                    self.save(urlid, url, str(pub_date), title, desc, text)
+                    self.save(urlid, url, str(pub_date), title, desc, text, topicsims)
                     if self.debug:
                         print """*{ID:%d} %s (%s - %s)\n\t%s\n\t%s\n\n""" % \
                             (urlid, title, str(pub_date), topic, url, desc )
@@ -308,7 +308,7 @@ class AINewsCrawler:
                 return True
         return False
     
-    def save(self, urlid, url, pubdate, title, desc, text, html=None):
+    def save(self, urlid, url, pubdate, title, desc, text, topicsims, html=None):
         """
         Save the extracted content on local machine via Python pickle module.
         """
@@ -317,7 +317,7 @@ class AINewsCrawler:
             savepickle(paths['ainews.news_data'] + "desc/"+ urlid + '.pkl', desc)
             savepickle(paths['ainews.news_data'] + "text/"+ urlid +'.pkl', text)
             #if html!=None: savefile(paths['ainews.news_data'] + "html/"+ urlid +'.html', html)
-            meta = (urlid, url, title, pubdate)
+            meta = (urlid, url, title, pubdate, topicsims)
             savepickle(paths['ainews.news_data'] + "meta/"+urlid+'.pkl', meta)
         except Exception:
             pass

@@ -23,6 +23,7 @@ import math
 import time
 import re
 import types
+import os
 from datetime import date, timedelta
 from operator import itemgetter
 
@@ -281,13 +282,22 @@ class AINewsRanker:
             desc = loadpickle(desc_file).strip()
         else:
             desc = unescape(row[6])
+        meta_file = paths['ainews.news_data'] + 'meta/'+str(urlid)+'.pkl'
+        meta = []
+        if os.path.exists(meta_file):
+            meta = loadpickle(meta_file)
+        topicsims = {}
+        if len(meta) > 4: topicsims = meta[4]
+        print str(urlid) + ":" + str(topicsims)
+
         if isinstance(desc, types.StringType):
             desc = unicode(desc, errors = 'ignore')
         url = unescape(row[0])
         newsinfo = {'urlid': urlid, 'url': url, 'pubdate': row[1], 'crawldate': row[2],
                 'title': row[3], 'publisher': row[4], 'topic': row[5],
                 'desc': desc, 'initsvm': row[7], 'svmscore': row[8],
-                'rate': row[9], 'adminrate': row[10], 'ratesd': row[11], 'ratecount': row[12]}
+                'rate': row[9], 'adminrate': row[10], 'ratesd': row[11],
+                'ratecount': row[12], 'topicsims': topicsims}
         return newsinfo
     
     def get_publisher(self, urlid):
