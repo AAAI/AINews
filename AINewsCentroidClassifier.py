@@ -112,7 +112,7 @@ class AINewsCentroidClassifier:
         articles={}
 
         sql = '''select u.urlid, u.title, u.content from cat_corpus as u,
-                 cat_corpus_cats as c where u.urlid = c.urlid and c.category = "%s"''' \
+                 cat_corpus_cats_single as c where u.urlid = c.urlid and c.category = "%s"''' \
                 % category
         rows = self.db.selectall(sql)
         for row in rows:
@@ -324,6 +324,7 @@ class AINewsCentroidClassifier:
         for word in self.wordlist.keys():
             self.db.execute("insert into %s (word, dftext) values('%s', %d)" % \
                 (table, word, self.wordlist[word]))
+        self.wordlist = {}
 
 
     ##############################
@@ -378,7 +379,9 @@ class AINewsCentroidClassifier:
             count_matched = 0
             for c in predict_corpus:
                 (topic, topicsims) = self.predict(c[0], c[1])
-                rows = self.db.selectall('select category from cat_corpus_cats where urlid=%d' % c[0])
+                rows = self.db.selectall('select category from cat_corpus_cats_single where urlid=%d' % c[0])
+                #print "%s (%s)" % (topic, rows[0][0])
+                #print topicsims
                 matched = False
                 for row in rows:
                     if topic == row[0]:
