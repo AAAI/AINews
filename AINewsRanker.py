@@ -288,7 +288,6 @@ class AINewsRanker:
             meta = loadpickle(meta_file)
         topicsims = {}
         if len(meta) > 4: topicsims = meta[4]
-        print str(urlid) + ":" + str(topicsims)
 
         if isinstance(desc, types.StringType):
             desc = unicode(desc, errors = 'ignore')

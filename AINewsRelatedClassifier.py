@@ -64,15 +64,3 @@ class AINewsRelatedClassifier:
         #print isrelated
         return isrelated
         
-        
-
-if __name__ == "__main__":
-    from AINewsCentroidClassifier import AINewsCentroidClassifier
-    model_dir = "category/centroid/"
-    cen = AINewsCentroidClassifier()
-    cen.init_predict(model_dir)
-    
-    data = cen.get_tfidf(651)
-    r = AINewsRelatedClassifier()
-    r.predict(data)
-    

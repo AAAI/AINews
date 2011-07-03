@@ -12,6 +12,7 @@ import sys
 import re
 import time
 import types
+import traceback
 from datetime import date, timedelta
 
 from AINewsConfig import config, paths, \
@@ -53,9 +54,7 @@ class AINewsCrawler:
         self.sourcetype = 'database'   # type is either 'database or file'
         
         # classifier topic
-        model_dir = paths['ainews.category_data'] + "centroid/"
         self.classifier = AINewsCentroidClassifier()
-        self.classifier.init_predict(model_dir)
         
         self.related_classifier = AINewsRelatedClassifier()
         
@@ -115,37 +114,34 @@ class AINewsCrawler:
                         title = unicode(title, errors = 'ignore')
                     
                     wordfreq=self.textprocessor.simpletextprocess(text)
-                    topic = 'NotRelated' # default topic; will change below
+                    topic = 'Unknown' # default topic; may change to NotRelated
                     urlid = self.add_urlmeta(url, len(wordfreq), tag, \
-                            topic,pub_date, self.today, publisher, title, desc)
+                            topic, pub_date, self.today, publisher, title, desc)
                     if urlid == None: continue
-                    self.add_freq_index(wordfreq, 'textwordurl', 'dftext', urlid)
+                    self.add_freq_index(wordfreq, urlid)
                 
-                
-                    # Update 19 categories
-                    # And RelatedClassifier checks if the news is related or not
-                    (topic, topicsims) = self.classifier.predict(urlid)
-                    # Related or Notrelated?
+                    # RelatedClassifier checks if the news is related or not
                     doc_data = self.classifier.get_tfidf(urlid)
                     isrelated = self.related_classifier.predict(doc_data)
                     if isrelated < 0:
                         topic = "NotRelated"
-                    # Update the topic in the database
-                    sql = "update urllist set topic = '%s' where rowid = %d" \
-                            % (topic, urlid)
-                    self.db.execute(sql)
+                        # Update the topic in the database
+                        sql = "update urllist set topic = 'NotRelated' where rowid = %d" % urlid
+                        self.db.execute(sql)
                         
                     
                     # Save to file
-                    self.save(urlid, url, str(pub_date), title, desc, text, topicsims)
+                    self.save(urlid, url, str(pub_date), title, desc, text, topic)
                     if self.debug:
-                        print """*{ID:%d} %s (%s - %s)\n\t%s\n\t%s\n\n""" % \
-                            (urlid, title, str(pub_date), topic, url, desc )
+                        print """*{ID:%d} %s (%s)\n\t%s\n\t%s\n\n""" % \
+                            (urlid, title, str(pub_date), url, desc )
             except (KeyboardInterrupt):
                 if self.debug: print "Quitting early due to keyboard interrupt."
                 sys.exit()
             except:
-                if self.debug: print "Parser for %s failed." % (publisher)
+                if self.debug:
+                    print "Parser for %s failed." % (publisher)
+                    print traceback.print_exc()
                 continue;
                 
                
@@ -190,11 +186,10 @@ class AINewsCrawler:
         if urlid == None: return False
         
         # Bulid index into database
-        self.add_freq_index(wordfreq, 'textwordurl', 'dftext', urlid)
+        self.add_freq_index(wordfreq, urlid)
         
         
-        # Update 19 categories
-        topic = self.classifier.predict(urlid)
+        topic = 'Unknown'
         doc_data = self.classifier.get_tfidf(urlid)
         isrelated = self.related_classifier.predict(doc_data)
         if isrelated < 0:
@@ -205,7 +200,7 @@ class AINewsCrawler:
         
         # Save to file
         self.save(urlid, self.parser.url, str(pub_date),\
-                        title, desc, self.parser.text)
+                        title, desc, self.parser.text, topic)
         
         
         if self.debug:
@@ -248,36 +243,25 @@ class AINewsCrawler:
             #   print >> sys.stderr, "ERROR: can't add url metadata.", e
             return None     
         
-    def add_freq_index(self, words, table, field, urlid):
+    def add_freq_index(self, words, urlid):
         """
-        Save the bag of words into database
+        Save the bag of words into database; if a word in this article is not
+        found in the database, ignore it
         """
         for word in words.keys():
-            wordid = self.db.getentryid('wordlist', 'word', word)
-            self.__update_docfreq(wordid, field)
-            try:
-                self.db.execute("insert into %s (urlid, wordid, freq) \
-                    values (%d, %d, %d)" % (table, urlid, wordid, words[word]))
-            except Exception :
-                print "\tAdd index error:", table, urlid, wordid, words[word]
+            # see if word is in db; if not, move on to next word
+            res = self.db.selectone("select rowid from wordlist where word='%s'" % word)
+            if res == None:
+                print "word %s not found!" % word
+                continue # ignore words not already found in database
 
-    def __update_docfreq(self, wordid, field, value = 1):
-        """
-        Update word's document frequency by value. It's used to measure
-        inverse doc-freq (IDF)
-        @param wordid: word's rowid in table 'wordlist'
-        @type wordid: C{int}
-        """
-        sql = """
-                update wordlist
-                set %s = %s + %d
-                where rowid = %d""" % (field, field, value, wordid)
-        try:
-            self.db.execute(sql)
-        except Exception :
-            print "\tUpdate docfreq error:", field, wordid
-                
-           
+            wordid = res[0]
+            try:
+                self.db.execute("insert into textwordurl (urlid, wordid, freq) \
+                    values (%d, %d, %d)" % (urlid, wordid, words[word]))
+            except Exception :
+                print "\tAdd index error:", urlid, wordid, words[word]
+
     def contain_whiteterm(self, text):
         """
         Parse the text for unigrams, bigrams and trigrams. It has to contain
@@ -308,7 +292,7 @@ class AINewsCrawler:
                 return True
         return False
     
-    def save(self, urlid, url, pubdate, title, desc, text, topicsims, html=None):
+    def save(self, urlid, url, pubdate, title, desc, text, topic):
         """
         Save the extracted content on local machine via Python pickle module.
         """
@@ -316,8 +300,9 @@ class AINewsCrawler:
         try:
             savepickle(paths['ainews.news_data'] + "desc/"+ urlid + '.pkl', desc)
             savepickle(paths['ainews.news_data'] + "text/"+ urlid +'.pkl', text)
-            #if html!=None: savefile(paths['ainews.news_data'] + "html/"+ urlid +'.html', html)
-            meta = (urlid, url, title, pubdate, topicsims)
+            # meta[4] (None) will be topicsims later
+            # (choose_category() in CentroidClassifier
+            meta = (urlid, url, title, pubdate, None, topic)
             savepickle(paths['ainews.news_data'] + "meta/"+urlid+'.pkl', meta)
         except Exception:
             pass

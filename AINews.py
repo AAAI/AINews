@@ -21,30 +21,6 @@ phrases) that indicate higher or lower interest. The sources of the articles
 will also be considered, since appearance of a story in a major news publication
 like the NY Times makes it more likely to be asked about.
 
-USAGE:
-        python AINews.py COMMAND [OPTION]
-    COMMAND:
-        (1) crawl:
-            crawl latest news from outside web.
-            -r, --rss       (default) using RSS feeds to crawl news
-            -f, --file      crawl target URLs stored in the file
-            -u, --url       crawl one target URL
-            
-        (2) train:
-            train SVM news classifiers based on human rates.
-            
-        (3) rank:
-            rank the latest news and generate output files.
-            
-        (4) publish:
-            publish news from output files to Pmwiki site and send emails.
-                    
-        (5) all:
-            Automatically processing crawl,train, rank and publish tasks.
-            
-        View Latest news at:
-        http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/AINews
-        
 """
 
 import sys
@@ -55,6 +31,7 @@ import locale
 from AINewsConfig import config, paths
 from AINewsCrawler import AINewsCrawler
 from AINewsSVM import AINewsSVM
+from AINewsCentroidClassifier import AINewsCentroidClassifier
 from AINewsRanker import AINewsRanker
 from AINewsPublisher import AINewsPublisher
 from AINewsSubmitNews import AINewsSubmitNews
@@ -72,19 +49,22 @@ def usage():
             -r, --rss       (default) using RSS feeds to crawl news
             -f, --file      crawl target URLs stored in the file
             -u, --url       crawl one target URL
+
+        (2) categorize:
+            choose topics for all the news.
             
-        (2) train:
+        (3) train:
             train news classifiers based on human rates.
             
-        (3) rank:
+        (4) rank:
             rank the latest news and generate output files.
             
-        (4) publish:
+        (5) publish:
             publish news from output files to Pmwiki site and send emails.
             It is weekly publish to the public.
             
-        (5) all:
-            Automatically processing crawl,train, rank and publish tasks.
+        (6) all:
+            Automatically processing crawl, categorize, train, rank, and publish tasks.
             
         View Latest news at:
         http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/AINews
@@ -115,6 +95,10 @@ def crawl(opts):
             assert False, "unhandled option"
     if rss_flag:
         crawler.crawl()
+
+def categorize():
+    centroid = AINewsCentroidClassifier()
+    centroid.categorize_all()
         
 def train():
     svm = AINewsSVM()
@@ -144,7 +128,7 @@ def main():
     # Set en_US, UTF8
     locale.setlocale(locale.LC_ALL,'en_US.UTF-8')
     
-    commands_list = ("crawl", "train", "rank", "publish", "all", "help")
+    commands_list = ("crawl", "categorize", "train", "rank", "publish", "all", "help")
     try:
         if len(sys.argv) < 2 or sys.argv[1] not in commands_list:
             usage()
@@ -159,6 +143,9 @@ def main():
 
     if command == "crawl":    
         crawl(opts)
+
+    elif command == "categorize":
+        categorize()
             
     elif command == "train":
         train()     
@@ -170,8 +157,8 @@ def main():
         publish()
         
     elif command == "all":
-        crawl(opts)
         train()
+        crawl(opts)
         rank()
         publish()
     

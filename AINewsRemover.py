@@ -26,6 +26,7 @@ class AINewsRemover():
         @param urlid: the target urlid news to be removed
         @type urlid: C{int}
         """
+        print "Removing %d" % urlid
         # Remove word doc freq        
         sql = "DELETE FROM wordlist WHERE dftext = 1 AND rowid in\
                 (SELECT wordid FROM textwordurl WHERE urlid = %d)" % urlid
