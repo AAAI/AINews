@@ -127,8 +127,8 @@ class AINewsSVM:
         Called in AINewsRanker
         For each url/news, measure the tfidf of each word.
         """
-        for urlid in self.scores.keys():
-            if urlid in self.allnews.keys(): continue
+        for urlid in self.scores:
+            if urlid in self.allnews: continue
             
             sql = '''select t.wordid,t.freq from textwordurl as t, wordlist as w
                     where urlid = %d and t.wordid = w.rowid and dftext > %d
@@ -142,17 +142,17 @@ class AINewsSVM:
                 
             self.allnews[urlid] = doc
         '''        
-        self.matrix=[[(wordid in self.allnews[urlid].keys() \
+        self.matrix=[[(wordid in self.allnews[urlid] \
                         and self.allnews[urlid][wordid] or 0) \
-                            for wordid in self.allwords_idf.keys()] \
-                        for urlid in self.allnews.keys()]
+                            for wordid in self.allwords_idf] \
+                        for urlid in self.allnews]
         '''
         
     def get_tfidf(self, urlid):
         """
         Given a news urlid, compute its tfidf and save into cache.
         """
-        if urlid in self.allnews.keys():
+        if urlid in self.allnews:
             return self.allnews[urlid]
         else:
             sql = '''select t.wordid,t.freq from textwordurl as t, wordlist as w
@@ -214,7 +214,7 @@ class AINewsSVM:
         @type pos: C{tuple}
         """
         content = ""
-        for urlid in self.scores.keys():
+        for urlid in self.scores:
             score = self.scores[urlid]
             if score >= pos[0] and score < pos[1]: line = "+1  "
             else: line = "-1  "
@@ -270,7 +270,7 @@ class AINewsSVM:
         rows = self.db.selectall(sql)
         data = {}
         for row in rows:
-            if row[0] not in self.range.keys():
+            if row[0] not in self.range:
                 continue
             tfidf = (math.log(row[1]+1, 2)) * self.allwords_idf[row[0]]
             data[row[0]] = tfidf / self.range[row[0]]
@@ -445,7 +445,7 @@ class AINewsSVM:
         """
         Print out the TFIDF for each urlid.
         """
-        for urlid in self.entries.keys():
+        for urlid in self.entries:
             print urlid, self.entries[urlid]
  
 
@@ -511,7 +511,7 @@ def Correlation(x, y):
                 #chown(log_file, 'www-data', 'www-data')
             
         output = ""
-        for urlid in self.entries.keys():
+        for urlid in self.entries:
             e = self.entries[urlid]
             output += ','.join([str(e['score']),str(urlid), '\"' + \
                             e['url'] + '\"','\"' + e['title'] + '\"']) + '\n'

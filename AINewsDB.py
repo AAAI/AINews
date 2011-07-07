@@ -34,12 +34,15 @@ class AINewsDB:
         self.cursor.close()
         self.con.close()
         
-    def execute(self, query):
+    def execute(self, query, args = None):
         """
         Execute SQL query with no return value
         """
-        self.cursor.execute(query)
-    
+        if args == None:
+            self.cursor.execute(query)
+        else:
+            self.cursor.execute(query, args)
+
     def insert(self, query):
         """
         Execute SQL query and return the last rowid

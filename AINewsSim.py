@@ -78,8 +78,8 @@ class AINewsSim:
         doc1 = self.get_tfidf(docid1)
         doc2 = self.get_tfidf(docid2)
         simval = 0.0
-        for wordid in doc1.keys():
-            if wordid in doc2.keys():
+        for wordid in doc1:
+            if wordid in doc2:
                 simval += doc1[wordid] * doc2[wordid]
         return simval
     
@@ -115,7 +115,7 @@ class AINewsSim:
         @param urlid: urlid of the news story
         @type urlid: C{int}
         """
-        if urlid in self.tfidfs.keys():
+        if urlid in self.tfidfs:
             return self.tfidfs[urlid]
         
         doc = {}
@@ -130,7 +130,7 @@ class AINewsSim:
             doc[row[0]] = val
             sqsum += val * val
         dist = math.sqrt(sqsum)
-        for key in doc.keys():
+        for key in doc:
             doc[key] /= dist
             
         self.tfidfs[urlid] = doc
@@ -178,18 +178,18 @@ class AINewsSim:
             centroid = {}
             for urlid in c:
                 doc = self.get_tfidf(urlid)
-                for key in doc.keys():
+                for key in doc:
                     centroid.setdefault(key, 0)
                     centroid[key] += doc[key]
             # Average to get centroid            
             N = len(c)
             distsq = 0.0
-            for key in centroid.keys():
+            for key in centroid:
                 val = centroid[key]/N
                 centroid[key] = val
                 distsq += val * val
             dist = math.sqrt(distsq)
-            for key in centroid.keys():
+            for key in centroid:
                 centroid[key] /= dist
             
             # Find the closest urlid to centroid
@@ -211,7 +211,7 @@ class AINewsSim:
         '''
         doc = self.get_tfidf(urlid)
         simval = 0.0
-        for wordid in doc.keys():
+        for wordid in doc:
             simval += centroid[wordid] * doc[wordid]
         return simval
             

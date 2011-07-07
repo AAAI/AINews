@@ -85,7 +85,7 @@ class AINewsTextProcessor:
         self.tagged_sentences = [nltk.ne_chunk(sent, binary=True) \
                                     for sent in sentences]
         for tagged_sent in self.tagged_sentences:
-            if self.debug: print tagged_sent
+            if self.debug: pass #print tagged_sent
             for tagged_token in tagged_sent:
                 if type(tagged_token[0]) == types.TupleType :
                     name_entity = ""

@@ -165,7 +165,7 @@ def savepmwiki(filename, page):
     Save Pmwiki page from wiki.d directory
     """
     content = ""
-    for key in page.keys():
+    for key in page:
         content += key + '=' + page[key]
     savefile(filename, content)
         

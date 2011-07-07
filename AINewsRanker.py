@@ -134,7 +134,7 @@ class AINewsRanker:
                     transcript[urlid].append( \
                         "Starting score at config'd relevance score %.1f * 10000 = %.1f" % \
                         (rs, scores[urlid]))
-                    if urlid in simnews.keys():
+                    if urlid in simnews:
                         scores[urlid]+= len(simnews[urlid])*10
                         transcript[urlid].append( \
                             "Added 10*%d to score because %d stories are similar = %.1f" % \
@@ -146,7 +146,7 @@ class AINewsRanker:
                 transcript[urlid].append( \
                     "Starting score at config'd relevance score %.1f * 10000 = %.1f" % \
                     (rs, scores[urlid]))
-                if urlid in simnews.keys():
+                if urlid in simnews:
                     scores[urlid]+= len(simnews[urlid])*10
                     transcript[urlid].append( \
                         "Added 10*%d to score because %d stories are similar = %.1f" % \
@@ -163,17 +163,17 @@ class AINewsRanker:
 
         '''
         # Update finalscore of each news in urllist table
-        for urlid in scores.keys():
+        for urlid in scores:
             sql = "UPDATE urllist SET finalscore = %f WHERE rowid = %d" \
                     % (scores[urlid], urlid)
             self.db.execute(sql)
         '''
-        for urlid in scores.keys():
+        for urlid in scores:
             words = self.count_whitelist(urlid)
             cnt = sum(words.values())
             scores[urlid] += cnt * 100
             wordlist = []
-            for w in words.keys():
+            for w in words:
                 wordlist.append("'%s': %d" % (w, words[w]))
             transcript[urlid].append("Whitelist occurrences: %s" % ", ".join(wordlist))
             transcript[urlid].append( \
@@ -182,9 +182,9 @@ class AINewsRanker:
        
         
         # rank by publisher source
-        for urlid in scores.keys():
+        for urlid in scores:
             pub_src = self.get_publisher(urlid)
-            if pub_src in self.srcscores.keys():
+            if pub_src in self.srcscores:
                 scores[urlid] += self.srcscores[pub_src]
                 transcript[urlid].append("Adding to score publisher's importance (+%d, position %d/%d in the list) = %.1f" % \
                     (self.srcscores[pub_src], self.source_order.index(pub_src), \
@@ -323,17 +323,17 @@ class AINewsRanker:
         words = {}
         for unigram in self.unigrams:
             word = self.get_word(unigram)
-            if unigram in data.keys():
+            if unigram in data:
                 words[word] = data[unigram]
         for bigram in self.bigrams:
             word = self.get_word(bigram[0]) + " " + self.get_word(bigram[1])
-            if bigram[0] in data.keys() and bigram[1] in data.keys():
+            if bigram[0] in data and bigram[1] in data:
                 words[word] = min(data[bigram[0]], data[bigram[1]])
         for trigram in self.trigrams:
             word = self.get_word(trigram[0]) + " " + self.get_word(trigram[1]) + \
                 " " + self.get_word(trigram[2])
-            if trigram[0] in data.keys() and trigram[1] in data.keys() \
-               and trigram[2] in data.keys():
+            if trigram[0] in data and trigram[1] in data \
+               and trigram[2] in data:
                 words[word] = min(data[trigram[0]], data[trigram[1]], data[trigram[2]])
         return words
                 

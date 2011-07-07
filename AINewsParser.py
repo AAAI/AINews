@@ -281,7 +281,7 @@ class AINewsParser:
         @type text: C{string}
         """
         today = date.today()
-        for dateformat in dateformat_regexps.keys():
+        for dateformat in dateformat_regexps:
             regexp = dateformat_regexps[dateformat][0]
             res = re.search(regexp, text, re.IGNORECASE)
             if res == None:

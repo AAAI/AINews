@@ -56,8 +56,8 @@ class AINewsRelatedClassifier:
         @type data: C{dict}
         '''
         scaled_data = {}
-        for key in data.keys():
-            if key in self.range.keys():
+        for key in data:
+            if key in self.range:
                 scaled_data[key] = data[key] / self.range[key]
                 
         isrelated = svm_predict([0], [scaled_data], self.mysvm)

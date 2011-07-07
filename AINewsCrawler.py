@@ -248,7 +248,7 @@ class AINewsCrawler:
         Save the bag of words into database; if a word in this article is not
         found in the database, ignore it
         """
-        for word in words.keys():
+        for word in words:
             # see if word is in db; if not, move on to next word
             res = self.db.selectone("select rowid from wordlist where word='%s'" % word)
             if res == None:

@@ -25,7 +25,7 @@ def main():
     raw  = read_raw_document('news/text/1.txt')
     
     wordfreq = processor.simpletextprocess(raw)
-    for word in wordfreq.keys():
+    for word in wordfreq:
         print word, wordfreq[word]
     """
     unigrams = processor.unigrams(raw)
