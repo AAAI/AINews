@@ -42,6 +42,7 @@ class AINewsDB:
             self.cursor.execute(query)
         else:
             self.cursor.execute(query, args)
+        return self.cursor.lastrowid
 
     def insert(self, query):
         """

@@ -44,6 +44,7 @@ class AINewsCentroidClassifier:
         self.cache_urls = {}
 
         self.wordlist = {}
+        self.wordids = {}
 
         self.categories =["AIOverview","Agents", "Applications", \
                  "CognitiveScience","Education","Ethics", "Games", "History",\
@@ -51,6 +52,11 @@ class AINewsCentroidClassifier:
                  "Reasoning","Representation", "Robots","ScienceFiction",\
                  "Speech", "Systems","Vision"]
         
+        self.tfik = {}
+        for cat in self.categories:
+            self.tfik[cat] = {}
+        self.icsd = {}
+        self.cat_counts = {}
         
         
     ##############################
@@ -177,6 +183,7 @@ class AINewsCentroidClassifier:
         for word in wordids:
             tfidf = math.log(wordids[word][0], 2) * (math.log(self.corpus_count, 2) - \
                  math.log(wordids[word][1], 2))
+            tfidf /= self.icsd[self.wordids[word]]
             data[word] = tfidf
             distsq += tfidf * tfidf
         dist = math.sqrt(distsq)
@@ -259,16 +266,40 @@ class AINewsCentroidClassifier:
         #print "words common:", numcommon, "data total:", len(data), "centroid total:", len(centroid)
         return sim
 
-    def add_freq_index(self, words):
-        for word in words:
+    def add_freq_index(self, wordfreq, categories = []):
+        for word in wordfreq:
             self.wordlist.setdefault(word, 0)
             self.wordlist[word] += 1
+            if wordfreq[word] == 0:
+                print word,"has wordfreq==0"
+
+            for cat in self.categories:
+                self.tfik[cat].setdefault(word, 0)
+            for cat in categories:
+                self.tfik[cat][word] += wordfreq[word]
 
     def commit_freq_index(self, table):
+        for cat in self.categories:
+            for word in self.tfik[cat]:
+                self.tfik[cat][word] /= float(self.cat_count[cat])
+
         for word in self.wordlist:
-            self.db.execute("insert into "+table+" (word, dftext) values(%s, %s)", \
-                (word, self.wordlist[word]))
+            self.icsd.setdefault(word, 0.0)
+            for cat in self.categories:
+                tmp = self.tfik[cat][word]
+                for cat2 in self.categories:
+                    tmp -= (self.tfik[cat2][word] / 19.0)
+                tmp = tmp*tmp
+                self.icsd[word] += tmp / 19.0
+            self.icsd[word] = math.sqrt(self.icsd[word])
+
+        for word in self.wordlist:
+            rowid = self.db.execute("insert into "+table+" (word, dftext) values(%s, %s)", \
+                        (word, self.wordlist[word]))
+            self.wordids[rowid] = word
         self.wordlist = {}
+
+
 
 
     ##############################
@@ -292,24 +323,35 @@ class AINewsCentroidClassifier:
                 print "Selecting random %d%% of corpus." % (pct * 100)
                 rows = list(self.db.selectall( \
                     "select c.urlid, c.content, group_concat(cc.category separator ' ') " +
-                    "from cat_corpus as c, cat_corpus_cats_single as cc where c.urlid = cc.urlid " +
+                    "from cat_corpus as c, cat_corpus_cats as cc where c.urlid = cc.urlid " +
                     "group by c.urlid"))
                 random.shuffle(rows)
                 random.shuffle(rows)
                 offset = int(len(rows)*pct)
                 self.corpus_count = offset+1
+                self.cat_count = {}
                 train_corpus = rows[0:offset]
                 # always predict 10%
                 predict_corpus = rows[offset:offset+int(len(rows)*0.1)]
     
                 self.db.execute("delete from wordlist_eval")
                 self.db.execute("alter table wordlist_eval auto_increment = 0")
+
+                self.tfik = {}
+                for cat in self.categories:
+                    self.tfik[cat] = {}
+                self.icsd = {}
+                for cat in self.categories:
+                    self.cat_count[cat] = 0
+                for c in train_corpus:
+                    for cat in c[2].split(' '):
+                        self.cat_count[cat] += 1
     
                 for c in train_corpus:
                     sys.stdout.write('.')
                     sys.stdout.flush()
                     wordfreq = self.txtpro.simpletextprocess(c[1])
-                    self.add_freq_index(wordfreq)
+                    self.add_freq_index(wordfreq, c[2].split(' '))
                 self.commit_freq_index('wordlist_eval')
                 print
     
