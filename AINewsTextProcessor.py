@@ -11,7 +11,7 @@ import re
 import nltk
 import types
 from nltk.corpus import wordnet as wn
-from AINewsConfig import config, stopwords
+from AINewsConfig import config, stopwords, cat_whitelist
 
 class AINewsTextProcessor:
     """
@@ -24,6 +24,7 @@ class AINewsTextProcessor:
         Initialize AINewsTextProcessor class
         """
         self.debug = config['ainews.debug']
+        self.cache = {}
         
     def unigrams(self, raw):
         """
@@ -33,7 +34,8 @@ class AINewsTextProcessor:
         """
         if raw =="": return []
         splitter=re.compile('\\W*')
-        return [s.lower() for s in splitter.split(raw) if s != '']
+        return [s.lower() for s in splitter.split(raw) \
+                if s != '' and s.lower() not in stopwords]
          
     def bigrams(self, unigrams):
         """
@@ -51,7 +53,7 @@ class AINewsTextProcessor:
         """
         return nltk.trigrams(unigrams)
         
-    def simpletextprocess(self, raw):
+    def simpletextprocess(self, urlid, raw):
         """
         Key function in AINewsTextProcessor that it extracts the bag of words,
         then each word is morphed and passed the stopword list and count
@@ -59,11 +61,38 @@ class AINewsTextProcessor:
         @param raw: the raw text to be processed.
         @type raw: C{string}
         """
-        words = self.unigrams(raw)
-        words = [self.simple_pos_morphy(w) for w in words \
-                            if len(w)>2 and not w.isdigit()
-                             and w.lower() not in stopwords ]
-        return nltk.FreqDist(words)
+        if urlid in self.cache:
+            return self.cache[urlid]
+
+        stemmer = nltk.stem.PorterStemmer()
+        unigrams = map(lambda w: stemmer.stem(w), self.unigrams(raw))
+        self.cache[urlid] = nltk.FreqDist(unigrams)
+        return self.cache[urlid]
+
+    def whiteprocess(self, urlid, raw):
+        """
+        Keep only whitelisted unigrams, bigrams, and trigrams
+        """
+        if urlid in self.cache:
+            return self.cache[urlid]
+
+        stemmer = nltk.stem.PorterStemmer()
+
+        unigrams = map(lambda w: stemmer.stem(w), self.unigrams(raw))
+        words_all = unigrams
+        for (a,b) in self.bigrams(unigrams):
+            if ' ' in a or ' ' in b: continue
+            words_all.append(a + ' ' + b)
+        for (a,b,c) in self.trigrams(unigrams):
+            if ' ' in a or ' ' in b or ' ' in c: continue
+            words_all.append(a + ' ' + b + ' ' + c)
+
+        words = []
+        for w in words_all:
+            if w.lower() in cat_whitelist:
+                words.append(w.lower())
+        self.cache[urlid] = nltk.FreqDist(words)
+        return self.cache[urlid]
         
     def textprocess(self, raw, onlyNOUN = True):
         """

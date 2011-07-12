@@ -4,7 +4,8 @@ It parses the config.ini as well as pre-define several static parameters.
 """
 
 import sys
-from AINewsTools import loadconfig
+from AINewsTools import loadconfig, loadfile
+import nltk
 
 # Load those user configurable parameters
 config = loadconfig("config/config.ini")
@@ -21,6 +22,14 @@ paths = loadconfig("config/paths.ini")
 whitelist_unigrams = frozenset(config['crawler.whitelist_unigrams'].split(":"))
 whitelist_bigrams  = frozenset(config['crawler.whitelist_bigrams'].split(":"))
 whitelist_trigrams = frozenset(config['crawler.whitelist_trigrams'].split(":"))
+
+stemmer = nltk.stem.PorterStemmer()
+cat_whitelist = []
+for line in loadfile("config/cat_whitelist.txt"):
+    w = line.strip().lower()
+    if w != ' ':
+        ws = map(lambda w: stemmer.stem(w), w.split(' '))
+        cat_whitelist.append(' '.join(ws))
 
 stopwords = set()
 try:

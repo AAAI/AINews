@@ -20,6 +20,7 @@ import os
 import sys
 import math
 import random
+import operator
 from subprocess import *
 import time
 from datetime import date, datetime, timedelta
@@ -54,14 +55,18 @@ class AINewsCentroidClassifier:
         
         self.tfijk = {}
         self.tfik = {}
-        self.csdik = {}
+        self.csd = {}
         for cat in self.categories:
             self.tfik[cat] = {}
             self.tfijk[cat] = {}
-            self.csdik[cat] = {}
+            self.csd[cat] = {}
         self.icsd = {}
         self.sd = {}
         self.cat_urlids = {}
+
+        self.icsd_pow = 0.0
+        self.csd_pow = 0.0
+        self.sd_pow = 0.0
         
         
     ##############################
@@ -86,7 +91,7 @@ class AINewsCentroidClassifier:
                 print "%d/%d" % (i, len(rows))
                 i += 1
                 urlids.append(row[0])
-                wordfreq = self.txtpro.simpletextprocess(row[1])
+                wordfreq = self.txtpro.whiteprocess(row[0], row[1])
                 self.add_freq_index(wordfreq)
             self.commit_freq_index('wordlist')
                 
@@ -131,8 +136,9 @@ class AINewsCentroidClassifier:
 
         # Normalize centroid
         dist = math.sqrt(distsq)
-        for key in centroid:
-            centroid[key] /= dist
+        if dist > 1.0e-9:
+            for key in centroid:
+                centroid[key] /= dist
             
         return centroid
     
@@ -154,8 +160,10 @@ class AINewsCentroidClassifier:
                 file = os.path.join(model_dir, category+".pkl")
                 self.models.append(loadpickle(file))
         self.dftext = {}
+        self.wordids = {}
         rows = self.db.selectall('select rowid, word, dftext from %s' % wordlist_table)
         for row in rows:
+            self.wordids[row[0]] = row[1]
             self.dftext[row[1]] = (row[0], row[2])
             
     def get_tfidf(self, urlid, content = None):
@@ -174,26 +182,24 @@ class AINewsCentroidClassifier:
                      where urlid = %d and t.wordid = w.rowid''' % (urlid)
             rows = self.db.selectall(sql)
             for row in rows:
-                # add 1 to dftext since that word is in this doc, too
-                words[row[0]] = (row[1], row[2]+1)
+                words[row[0]] = (row[1], row[2])
         else:
-            wordfreq = self.txtpro.simpletextprocess(content)
+            wordfreq = self.txtpro.whiteprocess(urlid, content)
             for word in wordfreq:
                 if word in self.dftext:
-                    # add 1 to dftext since that word is in this doc, too
-                    wordids[self.dftext[word][0]] = (wordfreq[word], self.dftext[word][1]+1)
+                    wordids[self.dftext[word][0]] = (wordfreq[word], self.dftext[word][1])
 
         data = {}
         distsq = 0.0
         for wordid in wordids:
-            word = self.wordids[wordid]
-            tfidf = math.log(wordids[wordid][0], 2) * (math.log(self.corpus_count, 2) - \
-                 math.log(wordids[wordid][1], 2))
+            tfidf = math.log(wordids[wordid][0] + 1, 2) * (math.log(self.corpus_count, 2) - \
+                 math.log(wordids[wordid][1] + 1, 2))
             data[wordid] = tfidf
             distsq += tfidf * tfidf
         dist = math.sqrt(distsq)
-        for key in data:
-            data[key] /= dist
+        if dist > 1.0e-9:
+            for key in data:
+                data[key] /= dist
         self.cache_urls[urlid] = data
         return data
     
@@ -223,7 +229,7 @@ class AINewsCentroidClassifier:
         '''
         meta = loadpickle(paths['ainews.news_data']+'meta/'+str(urlid)+'.pkl')
         text = loadpickle(paths['ainews.news_data']+'text/'+str(urlid)+'.pkl')
-        wordfreq = self.txtpro.simpletextprocess(text)
+        wordfreq = self.txtpro.whiteprocess(urlid, text)
         (topic, topicsims) = self.predict(urlid)
         # Add topicsims to meta
         meta = (meta[0], meta[1], meta[2], meta[3], topicsims, topic)
@@ -254,6 +260,56 @@ class AINewsCentroidClassifier:
         for urlid in candidate_urlids:
             self.choose_category(urlid)
 
+    def get_icsd(self, word):
+        if word in self.icsd:
+            return self.icsd[word]
+        self.icsd[word] = 0.0
+        for cat in self.categories:
+            tmp = self.tfik[cat][word]
+            for cat2 in self.categories:
+                tmp -= (self.tfik[cat2][word] / float(len(self.categories)))
+            tmp = tmp*tmp
+            self.icsd[word] += tmp / float(len(self.categories))
+        self.icsd[word] = math.sqrt(self.icsd[word])
+        return self.icsd[word]
+
+    def get_csd(self, cat, word):
+        if cat in self.csd:
+            if word in self.csd[cat]:
+                return self.csd[cat][word]
+        else:
+            self.csd[cat] = {}
+
+        self.csd[cat][word] = 0.0
+        for urlid in self.cat_urlids[cat]:
+            if word in self.tfijk[cat][urlid]:
+                tmp = self.tfijk[cat][urlid][word] - self.tfik[cat][word]
+            else:
+                tmp = 0 - self.tfik[cat][word]
+            self.csd[cat][word] += tmp*tmp / float(len(self.cat_urlids[cat]))
+        self.csd[cat][word] = math.sqrt(self.csd[cat][word])
+        return self.csd[cat][word]
+
+    def get_sd(self, word):
+        if word in self.sd:
+            return self.sd[word]
+
+        sub = 0.0
+        for cat in self.categories:
+            for urlid in self.tfijk[cat]:
+                if word in self.tfijk[cat][urlid]:
+                    sub += float(self.tfijk[cat][urlid][word]) / self.cat_totals
+        self.sd[word] = 0.0
+        for cat in self.categories:
+            for urlid in self.tfijk[cat]:
+                if word in self.tfijk[cat][urlid]:
+                    tmp = self.tfijk[cat][urlid][word] - sub
+                else:
+                    tmp = 0 - sub
+                self.sd[word] += tmp*tmp / self.cat_totals
+        self.sd[word] = math.sqrt(self.sd[word])
+        return self.sd[word]
+
     def cos_sim(self, data, centroid, category = None):
         '''
         A helper function to compute the cos simliarity between
@@ -266,18 +322,14 @@ class AINewsCentroidClassifier:
         sim = 0.0
         for key in data:
             if key in centroid:
-                if category == None:
-                    sim += data[key]*centroid[key]
-                else:
-                    word = self.wordids[key]
-                    d = data[key]
-                    c = centroid[key]
-                    if self.csdik[category][word] < 1.0e-10:
-                        tdf = math.sqrt(self.icsd[word] / self.sd[word])
-                    else:
-                        tdf = math.sqrt(self.icsd[word] / \
-                            (self.csdik[category][word] * self.sd[word]))
-                    sim += (d*tdf)*(c*tdf)
+                word = self.wordids[key]
+                d = data[key]
+                c = centroid[key]
+                tdf = math.pow(self.get_icsd(word), self.icsd_pow) * \
+                        math.pow(self.get_sd(word), self.sd_pow)
+                if category != None:
+                        tdf *= math.pow(self.get_csd(category, word), self.csd_pow)
+                sim += c*d*tdf
         return sim
 
     def add_freq_index(self, wordfreq, urlid, categories = []):
@@ -286,8 +338,6 @@ class AINewsCentroidClassifier:
         for word in wordfreq:
             self.wordlist.setdefault(word, 0)
             self.wordlist[word] += 1
-            if wordfreq[word] == 0:
-                print word,"has wordfreq==0"
 
             for cat in categories:
                 self.tfijk[cat][urlid].setdefault(word, 0)
@@ -302,50 +352,16 @@ class AINewsCentroidClassifier:
         # calculate tfik
         for cat in self.categories:
             for word in self.tfik[cat]:
-                self.tfik[cat][word] /= float(len(self.cat_urlids[cat]))
+                if len(self.cat_urlids[cat]) > 0:
+                    self.tfik[cat][word] /= float(len(self.cat_urlids[cat]))
 
-        # calculate icsd
-        for word in self.wordlist:
-            self.icsd.setdefault(word, 0.0)
-            for cat in self.categories:
-                tmp = self.tfik[cat][word]
-                for cat2 in self.categories:
-                    tmp -= (self.tfik[cat2][word] / 19.0)
-                tmp = tmp*tmp
-                self.icsd[word] += tmp / 19.0
-            self.icsd[word] = math.sqrt(self.icsd[word])
-
-        # calculate csd
-        for word in self.wordlist:
-            for cat in self.categories:
-                self.csdik[cat][word] = 0.0
-                for urlid in self.cat_urlids[cat]:
-                    if word in self.tfijk[cat][urlid]:
-                        tmp = self.tfijk[cat][urlid][word] - self.tfik[cat][word]
-                    else:
-                        tmp = 0 - self.tfik[cat][word]
-                    self.csdik[cat][word] += tmp*tmp/float(len(self.cat_urlids[cat]))
-                self.csdik[cat][word] = math.sqrt(self.csdik[cat][word])
-
-        # calculate sd
-        cat_totals = 0.0
+        self.cat_totals = 0.0
         for cat in self.categories:
-            cat_totals += float(len(self.cat_urlids[cat]))
-        for word in self.wordlist:
-            sub = 0.0
-            for cat in self.categories:
-                for urlid in self.tfijk[cat]:
-                    if word in self.tfijk[cat][urlid]:
-                        sub += float(self.tfijk[cat][urlid][word]) / cat_totals
-            self.sd.setdefault(word, 0.0)
-            for cat in self.categories:
-                for urlid in self.tfijk[cat]:
-                    if word in self.tfijk[cat][urlid]:
-                        tmp = self.tfijk[cat][urlid][word] - sub
-                    else:
-                        tmp = 0 - sub
-                    self.sd[word] += tmp*tmp / cat_totals
-            self.sd[word] = math.sqrt(self.sd[word])
+            self.cat_totals += float(len(self.cat_urlids[cat]))
+
+        self.icsd = {}
+        self.csd = {}
+        self.sd = {}
 
         for word in self.wordlist:
             rowid = self.db.execute("insert into "+table+" (word, dftext) values(%s, %s)", \
@@ -370,81 +386,131 @@ class AINewsCentroidClassifier:
         @type model_dir: C{string}
         '''
         random.seed()
-        results = {} 
-        for iteration in range(0, 10):
-            for i in range(1, 10):
+        results = {}
+        iteration = 0
+        iterations = 4 * 3 * 5 * 5 * 5
+        for it in range(0, 4):
+            for i in range(5, 10, 2):
                 pct = i/10.0
                 print "Selecting random %d%% of corpus." % (pct * 100)
-                rows = list(self.db.selectall( \
-                    "select c.urlid, c.content, group_concat(cc.category separator ' ') " +
-                    "from cat_corpus as c, cat_corpus_cats as cc where c.urlid = cc.urlid " +
-                    "group by c.urlid"))
+                rows = list(self.db.selectall("""select c.urlid, c.content,
+                    group_concat(cc.category separator ' ')
+                    from cat_corpus as c, cat_corpus_cats as cc
+                    where c.urlid = cc.urlid group by c.urlid"""))
                 random.shuffle(rows)
                 random.shuffle(rows)
                 offset = int(len(rows)*pct)
-                self.corpus_count = offset+1
                 self.cat_urlids = {}
-                train_corpus = rows[0:offset]
+                train_corpus = []
+
+                # filter out training articles that have no whitelist terms
+                for c in rows[0:offset]:
+                    wordfreq = self.txtpro.whiteprocess(c[0], c[1])
+                    if wordfreq.N() > 0:
+                        train_corpus.append(c)
+                self.corpus_count = len(train_corpus)
+
+                # filter out predict articles that have no whitelist terms
+                # (these will be ignored in crawling)
+                predict_corpus = []
                 # always predict 10%
-                predict_corpus = rows[offset:offset+int(len(rows)*0.1)]
+                for c in rows[offset:offset+int(len(rows)*0.1)]:
+                    wordfreq = self.txtpro.whiteprocess(c[0], c[1])
+                    if wordfreq.N() > 0:
+                        predict_corpus.append(c)
     
                 self.db.execute("delete from wordlist_eval")
                 self.db.execute("alter table wordlist_eval auto_increment = 0")
+                self.wordids = {}
+                self.cache_urls = {}
 
                 self.tfijk = {}
                 self.tfik = {}
-                self.csdik = {}
                 for cat in self.categories:
                     self.tfik[cat] = {}
                     self.tfijk[cat] = {}
-                    self.csdik[cat] = {}
-                self.icsd = {}
-                self.sd = {}
                 for cat in self.categories:
                     self.cat_urlids[cat] = []
                 for c in train_corpus:
                     for cat in c[2].split(' '):
                         self.cat_urlids[cat].append(c[0])
-    
+
                 for c in train_corpus:
                     sys.stdout.write('.')
                     sys.stdout.flush()
-                    wordfreq = self.txtpro.simpletextprocess(c[1])
+                    wordfreq = self.txtpro.whiteprocess(c[0], c[1])
                     self.add_freq_index(wordfreq, c[0], c[2].split(' '))
                 self.commit_freq_index('wordlist_eval')
                 print
     
                 # init_predict here to establish self.dftext
-                self.init_predict(paths['ainews.category_data']+'centroid_eval/', 'wordlist_eval')
+                self.init_predict(paths['ainews.category_data']+'centroid_eval/',
+                        'wordlist_eval')
                 for category in self.categories:
                     self.train_centroid(category, train_corpus, 'centroid_eval')
                 print
                 
                 # init_predict here to establish newly trained models
-                self.init_predict(paths['ainews.category_data']+'centroid_eval/', 'wordlist_eval')
-                count_matched = 0
-                for c in predict_corpus:
-                    (topic, topicsims) = self.predict(c[0], c[1])
-                    if topic in c[2].split(' '):
-                        sys.stdout.write('+')
-                        count_matched += 1
-                    else:
-                        sys.stdout.write('.')
-                    sys.stdout.flush()
-                print
-                result = 100.0*float(count_matched)/float(len(predict_corpus))
-                results.setdefault(i, [])
-                results[i].append(result)
-                print "Matched: %d/%d = %f%%" % \
-                    (count_matched, len(predict_corpus), result)
+                self.init_predict(paths['ainews.category_data']+'centroid_eval/',
+                        'wordlist_eval')
+                for icsd_pow in range(0, 5):
+                    for csd_pow in range(0, 5):
+                        for sd_pow in range(0, 5):
+                            self.icsd_pow = 1.0 - icsd_pow * 0.5
+                            self.csd_pow = 1.0 - csd_pow * 0.5
+                            self.sd_pow = 1.0 - sd_pow * 0.5
+                            count_matched = 0
+                            iteration += 1
+                            for c in predict_corpus:
+                                (topic, topicsims) = self.predict(c[0], c[1])
+                                if topic in c[2].split(' '):
+                                    sys.stdout.write('+')
+                                    count_matched += 1
+                                else:
+                                    sys.stdout.write('.')
+                                sys.stdout.flush()
+                            print
+                            result = 100.0*float(count_matched) / \
+                                        float(len(predict_corpus))
+                            rkey = (i, self.icsd_pow, self.csd_pow, self.sd_pow)
+                            results.setdefault(rkey, [])
+                            results[rkey].append(result)
+                            print ("%d/%d - Matched (%d%%, icsd=%.2f, " +
+                                "csd=%.2f, sd=%.2f): %d/%d = %f%%") % \
+                                (iteration, iterations, 10*i, \
+                                    self.icsd_pow, self.csd_pow, self.sd_pow,
+                                    count_matched, len(predict_corpus), result)
+                            sys.stdout.flush()
 
         print
         print "Summary:"
-        for i in results:
-            mean, std = meanstdv(results[i])
-            print "%d%% matched avg %f%% (std dev %f%%)" % (10*i, mean, std)
-            print results[i]
+        for (i, icsd_pow, csd_pow, sd_pow) in sorted(results.keys()):
+            mean, std = meanstdv(results[(i, icsd_pow, csd_pow, sd_pow)])
+            print ("%d%%, icsd=%.2f, csd=%.2f, sd=%.2f matched " +
+                "avg %f%% (std dev %f%%)") % \
+                (10*i, icsd_pow, csd_pow, sd_pow, mean, std)
+            print results[(i, icsd_pow, csd_pow, sd_pow)]
             print
+
+        print "icsd:"
+        for (word,val) in (sorted(self.icsd.iteritems(),
+                key=operator.itemgetter(1), reverse=True))[0:10]:
+            print "%s: %.2f" % (word, val),
+        print
+        print "csd:"
+        for cat in self.csd:
+            print cat
+            for (word,val) in (sorted(self.csd[cat].iteritems(),
+                    key=operator.itemgetter(1), reverse=True))[0:10]:
+                print "%s: %.2f" % (word, val),
+            print
+            print
+        print
+        print "sd:"
+        for (word,val) in (sorted(self.sd.iteritems(),
+                key=operator.itemgetter(1), reverse=True))[0:10]:
+            print "%s: %.2f" % (word, val),
+        print
 
 
 """
