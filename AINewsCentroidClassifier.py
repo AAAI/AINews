@@ -22,6 +22,7 @@ import math
 import random
 import operator
 from subprocess import *
+from itertools import izip
 import time
 from datetime import date, datetime, timedelta
 
@@ -82,16 +83,16 @@ class AINewsCentroidClassifier:
         If category is not None, then only train that specific category.
         '''
         if category == None:
-            print "\n****** Inserting category article word freqs ******\n"
+            #print "\n****** Inserting category article word freqs ******\n"
             sql = '''select u.urlid, u.content from cat_corpus as u'''
             rows = self.db.selectall(sql)
             urlids = []
             i = 0
             for row in rows:
-                print "%d/%d" % (i, len(rows))
+                #print "%d/%d" % (i, len(rows))
                 i += 1
                 urlids.append(row[0])
-                wordfreq = self.txtpro.whiteprocess(row[0], row[1])
+                wordfreq = self.txtpro.simpletextprocess(row[0], row[1])
                 self.add_freq_index(wordfreq)
             self.commit_freq_index('wordlist')
                 
@@ -123,7 +124,7 @@ class AINewsCentroidClassifier:
         '''
         Build centroid of one category
         '''
-        centroid = {} # will hold final centroid avg tfidf, indexed by wordid
+        centroid = {} # will hold final centroid tfidf, indexed by wordid
         for c in corpus:
             data = self.get_tfidf(c[0], c[1])
             for word in data:
@@ -166,7 +167,7 @@ class AINewsCentroidClassifier:
             self.wordids[row[0]] = row[1]
             self.dftext[row[1]] = (row[0], row[2])
             
-    def get_tfidf(self, urlid, content = None):
+    def get_tfidf(self, urlid, wordfreq):
         """
         Helper function to retrieve the tfidf of each word based on the urlid.
         @param  urlid: target news story's urlid.
@@ -176,18 +177,9 @@ class AINewsCentroidClassifier:
             return self.cache_urls[urlid]
             
         wordids = {}
-        if content == None:
-            sql = '''select w.wordid, t.freq, w.dftext
-                     from textwordurl as t, wordlist_eval as w
-                     where urlid = %d and t.wordid = w.rowid''' % (urlid)
-            rows = self.db.selectall(sql)
-            for row in rows:
-                words[row[0]] = (row[1], row[2])
-        else:
-            wordfreq = self.txtpro.whiteprocess(urlid, content)
-            for word in wordfreq:
-                if word in self.dftext:
-                    wordids[self.dftext[word][0]] = (wordfreq[word], self.dftext[word][1])
+        for word in wordfreq:
+            if word in self.dftext:
+                wordids[self.dftext[word][0]] = (wordfreq[word], self.dftext[word][1])
 
         data = {}
         distsq = 0.0
@@ -203,14 +195,14 @@ class AINewsCentroidClassifier:
         self.cache_urls[urlid] = data
         return data
     
-    def predict(self, urlid, content = None):
+    def predict(self, urlid, wordfreq):
         '''
         Predict its category from the 19 centroids
         Given a urlid of news story, retrieve its saved term vector and
         compare it with 19 category's centroid. Choose the closest category
         as the news story's category/topic.
         '''
-        data = self.get_tfidf(urlid, content)
+        data = self.get_tfidf(urlid, wordfreq)
         max_sim = 0
         max_i = 0
         similarities = {}
@@ -229,7 +221,7 @@ class AINewsCentroidClassifier:
         '''
         meta = loadpickle(paths['ainews.news_data']+'meta/'+str(urlid)+'.pkl')
         text = loadpickle(paths['ainews.news_data']+'text/'+str(urlid)+'.pkl')
-        wordfreq = self.txtpro.whiteprocess(urlid, text)
+        wordfreq = self.txtpro.simpletextprocess(urlid, text)
         (topic, topicsims) = self.predict(urlid)
         # Add topicsims to meta
         meta = (meta[0], meta[1], meta[2], meta[3], topicsims, topic)
@@ -332,7 +324,7 @@ class AINewsCentroidClassifier:
                 sim += c*d*tdf
         return sim
 
-    def add_freq_index(self, wordfreq, urlid, categories = []):
+    def add_freq_index(self, urlid, wordfreq, categories = []):
         for cat in categories:
             self.tfijk[cat][urlid] = {}
         for word in wordfreq:
@@ -378,6 +370,39 @@ class AINewsCentroidClassifier:
     #
     ##############################
 
+    def load_corpus(self, path, name):
+        wordsfile = os.path.join(path, name + ".mat.clabel")
+        f = open(wordsfile, 'r')
+        self.wordids = {}
+        wordid = 1
+        for line in f:
+            self.wordids[int(wordid)] = line.strip()
+            wordid += 1
+
+        catsfile = os.path.join(path, name + ".mat.rlabel")
+        f = open(catsfile, 'r')
+        cats = {}
+        uniqcats = set()
+        docid = 0
+        for line in f:
+            cats[docid] = line.strip()
+            uniqcats.add(line.strip())
+            docid += 1
+        self.categories = list(uniqcats)
+
+        matfile = os.path.join(path, name + ".mat")
+        f = open(matfile, 'r')
+        f.readline() # ignore first line
+        docs = []
+        docid = 0
+        for line in f:
+            wordfreq = {}
+            for (wordid, freq) in izip(*[iter(line.split())]*2):
+                wordfreq[self.wordids[int(wordid)]] = int(float(freq))
+            docs.append((docid, wordfreq, cats[docid]))
+            docid += 1
+        return docs
+
     def evaluate(self):
         '''
         Train on a portion of the corpus, and predict the rest;
@@ -392,32 +417,36 @@ class AINewsCentroidClassifier:
         for it in range(0, 4):
             for i in range(5, 10, 2):
                 pct = i/10.0
-                print "Selecting random %d%% of corpus." % (pct * 100)
-                rows = list(self.db.selectall("""select c.urlid, c.content,
-                    group_concat(cc.category separator ' ')
-                    from cat_corpus as c, cat_corpus_cats as cc
-                    where c.urlid = cc.urlid group by c.urlid"""))
+                #rows = list(self.db.selectall("""select c.urlid, c.content,
+                #    group_concat(cc.category separator ' ')
+                #    from cat_corpus as c, cat_corpus_cats as cc
+                #    where c.urlid = cc.urlid group by c.urlid"""))
+                rows = self.load_corpus("/home/josh/AINews/corpus/other/text-data", "ohscal")
                 random.shuffle(rows)
                 random.shuffle(rows)
                 offset = int(len(rows)*pct)
+                print "Selecting random %d%% of corpus (%d docs)." % \
+                        (pct * 100, offset)
                 self.cat_urlids = {}
                 train_corpus = []
 
                 # filter out training articles that have no whitelist terms
-                for c in rows[0:offset]:
-                    wordfreq = self.txtpro.whiteprocess(c[0], c[1])
-                    if wordfreq.N() > 0:
-                        train_corpus.append(c)
+                #for c in rows[0:offset]:
+                #    wordfreq = self.txtpro.simpletextprocess(c[0], c[1])
+                #    if wordfreq.N() > 0:
+                #        train_corpus.append(c)
+                train_corpus = rows[0:offset]
                 self.corpus_count = len(train_corpus)
 
                 # filter out predict articles that have no whitelist terms
                 # (these will be ignored in crawling)
-                predict_corpus = []
+                #predict_corpus = []
                 # always predict 10%
-                for c in rows[offset:offset+int(len(rows)*0.1)]:
-                    wordfreq = self.txtpro.whiteprocess(c[0], c[1])
-                    if wordfreq.N() > 0:
-                        predict_corpus.append(c)
+                #for c in rows[offset:offset+int(len(rows)*0.1)]:
+                #    wordfreq = self.txtpro.simpletextprocess(c[0], c[1])
+                #    if wordfreq.N() > 0:
+                #        predict_corpus.append(c)
+                predict_corpus = rows[offset:offset+int(len(rows)*0.1)]
     
                 self.db.execute("delete from wordlist_eval")
                 self.db.execute("alter table wordlist_eval auto_increment = 0")
@@ -438,14 +467,14 @@ class AINewsCentroidClassifier:
                 for c in train_corpus:
                     sys.stdout.write('.')
                     sys.stdout.flush()
-                    wordfreq = self.txtpro.whiteprocess(c[0], c[1])
-                    self.add_freq_index(wordfreq, c[0], c[2].split(' '))
+                    #wordfreq = self.txtpro.simpletextprocess(c[0], c[1])
+                    #self.add_freq_index(wordfreq, c[0], c[2].split())
+                    self.add_freq_index(c[0], c[1], c[2].split())
                 self.commit_freq_index('wordlist_eval')
                 print
     
                 # init_predict here to establish self.dftext
-                self.init_predict(paths['ainews.category_data']+'centroid_eval/',
-                        'wordlist_eval')
+                self.init_predict(None, 'wordlist_eval')
                 for category in self.categories:
                     self.train_centroid(category, train_corpus, 'centroid_eval')
                 print
