@@ -35,6 +35,10 @@ dir = /path/to/pmwiki/
 ; (leave trailing slash)
 svm_data = /path/to/svm/
 
+[corpus]
+
+; (leave trailing slash)
+corpus_other = /path/to/corpus/other/
 
 [feedback]
 

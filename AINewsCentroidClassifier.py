@@ -92,7 +92,7 @@ class AINewsCentroidClassifier:
                 #print "%d/%d" % (i, len(rows))
                 i += 1
                 urlids.append(row[0])
-                wordfreq = self.txtpro.simpletextprocess(row[0], row[1])
+                wordfreq = self.txtpro.whiteprocess(row[0], row[1])
                 self.add_freq_index(wordfreq)
             self.commit_freq_index('wordlist')
                 
@@ -101,24 +101,29 @@ class AINewsCentroidClassifier:
         else:
             self.train_centroid(category)
         
-    def train_centroid(self, category, corpus, model_dir):
+    def train_centroid(self, category, corpus, model_dir, debug = False):
         '''
         Train only one centroid of given category.
         Given the input training data in the src_dir, and output centroid
         saved as pickle file in the dest_dir.
         '''
-        print "\n****** Training", category,"******"
-        print "(1) Getting articles"
+        if debug:
+            print "\n****** Training", category,"******"
+            print "(1) Getting articles"
         corp = []
         for c in corpus:
             if category in c[2].split(' '):
-                print c[0],
+                if debug:
+                    print c[0],
                 corp.append(c)
-        print
-        print "(2) Making centroid"
+        if debug:
+            print
+            print "(2) Making centroid"
         centroid = self.make_centroid(corp)
-        print "(3) Saving centroid",
-        savepickle(paths['ainews.category_data']+model_dir+'/'+category+'.pkl', centroid)
+        if debug:
+            print "(3) Saving centroid",
+        savepickle(paths['ainews.category_data']+model_dir+'/'+category+'.pkl',
+                centroid)
         
     def make_centroid(self, corpus):
         '''
@@ -155,11 +160,11 @@ class AINewsCentroidClassifier:
         @param  model_dir: 19 centroid models path dir
         @type  model_dir: C{string}
         '''
-        self.models = []
+        self.models = {}
         if model_dir != None:
             for category in self.categories:
                 file = os.path.join(model_dir, category+".pkl")
-                self.models.append(loadpickle(file))
+                self.models[category] = loadpickle(file)
         self.dftext = {}
         self.wordids = {}
         rows = self.db.selectall('select rowid, word, dftext from %s' % wordlist_table)
@@ -204,16 +209,15 @@ class AINewsCentroidClassifier:
         '''
         data = self.get_tfidf(urlid, wordfreq)
         max_sim = 0
-        max_i = 0
+        max_cat = ""
         similarities = {}
-        for (i, model) in enumerate(self.models):
-            cat = self.categories[i]
-            sim = self.cos_sim(data, model, cat)
+        for cat in self.models:
+            sim = self.cos_sim(data, self.models[cat], cat)
             similarities[cat] = sim
             if sim > max_sim:
-                max_i = i
                 max_sim = sim
-        return (self.categories[max_i], similarities)
+                max_cat = cat
+        return (max_cat, similarities)
 
     def choose_category(self, urlid):
         '''
@@ -221,7 +225,7 @@ class AINewsCentroidClassifier:
         '''
         meta = loadpickle(paths['ainews.news_data']+'meta/'+str(urlid)+'.pkl')
         text = loadpickle(paths['ainews.news_data']+'text/'+str(urlid)+'.pkl')
-        wordfreq = self.txtpro.simpletextprocess(urlid, text)
+        wordfreq = self.txtpro.whiteprocess(urlid, text)
         (topic, topicsims) = self.predict(urlid)
         # Add topicsims to meta
         meta = (meta[0], meta[1], meta[2], meta[3], topicsims, topic)
@@ -319,8 +323,8 @@ class AINewsCentroidClassifier:
                 c = centroid[key]
                 tdf = math.pow(self.get_icsd(word), self.icsd_pow) * \
                         math.pow(self.get_sd(word), self.sd_pow)
-                if category != None:
-                        tdf *= math.pow(self.get_csd(category, word), self.csd_pow)
+                if category != None and self.get_csd(category, word) != 0.0:
+                    tdf *= math.pow(self.get_csd(category, word), self.csd_pow)
                 sim += c*d*tdf
         return sim
 
@@ -370,8 +374,76 @@ class AINewsCentroidClassifier:
     #
     ##############################
 
-    def load_corpus(self, path, name):
-        wordsfile = os.path.join(path, name + ".mat.clabel")
+    def load_corpus(self, ident, pct, debug = False):
+        source = ident.split(':')[0]
+        name = ident.split(':')[1]
+        if source == "file":
+            rows = self.load_file_corpus(name)
+        elif source == "db":
+            rows = self.load_db_corpus(name)
+
+        random.shuffle(rows)
+        offset = int(len(rows)*pct)
+        if debug:
+            print "Selecting random %d%% of corpus (%d docs)." % \
+                    (pct * 100, offset)
+
+        train_corpus = []
+        for row in rows[0:offset]:
+            if source == "db":
+                wordfreq = self.txtpro.whiteprocess(row[0], row[1])
+                if wordfreq.N() > 0:
+                    train_corpus.append((row[0], wordfreq, row[2]))
+            else:
+                train_corpus.append(row)
+        self.corpus_count = len(train_corpus)
+
+        predict_corpus = []
+        for row in rows[offset:offset+int(len(rows)*0.1)]:
+            if source == "db":
+                wordfreq = self.txtpro.whiteprocess(row[0], row[1])
+                if wordfreq.N() > 0:
+                    predict_corpus.append((row[0], wordfreq, row[2]))
+            else:
+                predict_corpus.append(row)
+
+        self.db.execute("delete from wordlist_eval")
+        self.db.execute("alter table wordlist_eval auto_increment = 0")
+        self.wordids = {}
+        self.cache_urls = {}
+        self.tfijk = {}
+        self.tfik = {}
+        for cat in self.categories:
+            self.tfik[cat] = {}
+            self.tfijk[cat] = {}
+        self.cat_urlids = {}
+        for cat in self.categories:
+            self.cat_urlids[cat] = []
+        for c in train_corpus:
+            for cat in c[2].split(' '):
+                self.cat_urlids[cat].append(c[0])
+
+        for c in train_corpus:
+            if debug:
+                sys.stdout.write('.')
+                sys.stdout.flush()
+            self.add_freq_index(c[0], c[1], c[2].split())
+        self.commit_freq_index('wordlist_eval')
+
+        # init_predict here to establish self.dftext
+        self.init_predict(None, 'wordlist_eval')
+        for category in self.categories:
+            self.train_centroid(category, train_corpus, 'centroid_eval', debug)
+        
+        if debug:
+            print
+        # init_predict here to establish newly trained models
+        self.init_predict(paths['ainews.category_data']+'centroid_eval/',
+                'wordlist_eval')
+        return (train_corpus, predict_corpus)
+
+    def load_file_corpus(self, name):
+        wordsfile = paths['corpus.corpus_other'] + name + ".mat.clabel"
         f = open(wordsfile, 'r')
         self.wordids = {}
         wordid = 1
@@ -379,7 +451,7 @@ class AINewsCentroidClassifier:
             self.wordids[int(wordid)] = line.strip()
             wordid += 1
 
-        catsfile = os.path.join(path, name + ".mat.rlabel")
+        catsfile = paths['corpus.corpus_other'] + name + ".mat.rlabel"
         f = open(catsfile, 'r')
         cats = {}
         uniqcats = set()
@@ -390,7 +462,7 @@ class AINewsCentroidClassifier:
             docid += 1
         self.categories = list(uniqcats)
 
-        matfile = os.path.join(path, name + ".mat")
+        matfile = paths['corpus.corpus_other'] + name + ".mat"
         f = open(matfile, 'r')
         f.readline() # ignore first line
         docs = []
@@ -403,7 +475,14 @@ class AINewsCentroidClassifier:
             docid += 1
         return docs
 
-    def evaluate(self):
+    def load_db_corpus(self, name):
+        rows = list(self.db.selectall("""select c.urlid, c.content,
+            group_concat(cc.category separator ' ')
+            from %s as c, %s as cc
+            where c.urlid = cc.urlid group by c.urlid""" % name.split(':')))
+        return rows
+
+    def evaluate(self, ident):
         '''
         Train on a portion of the corpus, and predict the rest;
         evaluate performance. Various parameters are evaluated.
@@ -417,71 +496,7 @@ class AINewsCentroidClassifier:
         for it in range(0, 4):
             for i in range(5, 10, 2):
                 pct = i/10.0
-                #rows = list(self.db.selectall("""select c.urlid, c.content,
-                #    group_concat(cc.category separator ' ')
-                #    from cat_corpus as c, cat_corpus_cats as cc
-                #    where c.urlid = cc.urlid group by c.urlid"""))
-                rows = self.load_corpus("/home/josh/AINews/corpus/other/text-data", "ohscal")
-                random.shuffle(rows)
-                random.shuffle(rows)
-                offset = int(len(rows)*pct)
-                print "Selecting random %d%% of corpus (%d docs)." % \
-                        (pct * 100, offset)
-                self.cat_urlids = {}
-                train_corpus = []
-
-                # filter out training articles that have no whitelist terms
-                #for c in rows[0:offset]:
-                #    wordfreq = self.txtpro.simpletextprocess(c[0], c[1])
-                #    if wordfreq.N() > 0:
-                #        train_corpus.append(c)
-                train_corpus = rows[0:offset]
-                self.corpus_count = len(train_corpus)
-
-                # filter out predict articles that have no whitelist terms
-                # (these will be ignored in crawling)
-                #predict_corpus = []
-                # always predict 10%
-                #for c in rows[offset:offset+int(len(rows)*0.1)]:
-                #    wordfreq = self.txtpro.simpletextprocess(c[0], c[1])
-                #    if wordfreq.N() > 0:
-                #        predict_corpus.append(c)
-                predict_corpus = rows[offset:offset+int(len(rows)*0.1)]
-    
-                self.db.execute("delete from wordlist_eval")
-                self.db.execute("alter table wordlist_eval auto_increment = 0")
-                self.wordids = {}
-                self.cache_urls = {}
-
-                self.tfijk = {}
-                self.tfik = {}
-                for cat in self.categories:
-                    self.tfik[cat] = {}
-                    self.tfijk[cat] = {}
-                for cat in self.categories:
-                    self.cat_urlids[cat] = []
-                for c in train_corpus:
-                    for cat in c[2].split(' '):
-                        self.cat_urlids[cat].append(c[0])
-
-                for c in train_corpus:
-                    sys.stdout.write('.')
-                    sys.stdout.flush()
-                    #wordfreq = self.txtpro.simpletextprocess(c[0], c[1])
-                    #self.add_freq_index(wordfreq, c[0], c[2].split())
-                    self.add_freq_index(c[0], c[1], c[2].split())
-                self.commit_freq_index('wordlist_eval')
-                print
-    
-                # init_predict here to establish self.dftext
-                self.init_predict(None, 'wordlist_eval')
-                for category in self.categories:
-                    self.train_centroid(category, train_corpus, 'centroid_eval')
-                print
-                
-                # init_predict here to establish newly trained models
-                self.init_predict(paths['ainews.category_data']+'centroid_eval/',
-                        'wordlist_eval')
+                predict_corpus = self.load_corpus(ident, pct, True)[1]
                 for icsd_pow in range(0, 5):
                     for csd_pow in range(0, 5):
                         for sd_pow in range(0, 5):
@@ -564,13 +579,14 @@ if __name__ == "__main__":
     cat = AINewsCentroidClassifier()
 
     if len(sys.argv) < 2:
-        print "Provide 'train' or 'evaluate'"
+        print ("Provide 'train' or 'evaluate db:cat_corpus:cat_corpus_cats'" +
+            " or 'evaluate file:oh10'")
         sys.exit()
     
     if sys.argv[1] == "train":
         cat.train()
     elif sys.argv[1] == "evaluate":
-        cat.evaluate()
+        cat.evaluate(sys.argv[2])
         
     print "\n\n"
     print datetime.now() - start   
