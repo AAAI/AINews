@@ -119,7 +119,7 @@ here. Edit the script to filter only the data that is meaningful, then execute
 as follows:
 
 <pre>
-perl process-results.pl < evaluator-output.txt
+perl process-results.pl &lt; evaluator-output.txt
 </pre>
 
 
