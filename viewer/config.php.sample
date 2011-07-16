@@ -1,0 +1,8 @@
+<?php
+
+$dbhost = "localhost";
+$dbuser = "root";
+$dbpass = "pass";
+$database = "ainews";
+
+

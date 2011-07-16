@@ -1,0 +1,131 @@
+/* ---- ( iTunes CSS ) ---- */
+table { 
+	font: 80% Verdana, Arial, Helvetica, sans-serif;
+	color: #000;
+	text-align: left;
+	border-collapse: collapse;
+	border: 1px solid #dadada;
+	border-top: none;	
+	width:670px;
+	
+}
+table a {
+color:#204A87;
+	
+}
+table a:visited {
+color:#5C3566;
+	
+}
+
+
+tr.odd {
+	background-color: #ebf3ff;
+}
+tr a {
+	font-weight:bold;
+	color: #3465A4;
+}
+tr a:visited{
+font-weight:bold;
+	color: #5C3566;
+}
+tr:hover a {
+	color: #ffffff;
+}
+tr:hover, tr.odd:hover {
+	background-color:#C4BD97;
+	color: #ffffff;
+}
+
+tr:active , tr.odd:active  {
+	background-color:#595959;
+	color: #ffffff;
+}
+
+caption {
+	height: 45px;
+	line-height: 44px;
+	color: #60634E;
+	font-weight: bold;
+	text-align: center;
+	width: 100%;
+	margin: 0;
+	padding: 0;
+	background: #ffffff url(../images/table/captop.jpg) no-repeat;
+	background-position: 50% top;
+	border-left: 2px solid #616161;
+	border-right: 2px solid #616161;
+}
+
+thead th {
+	font-size: 110%;
+	color: #FFFFFF;
+	background-color:#0099cc;
+	height:1.1em;
+	textalignment:center;
+	
+}
+thead th:active {
+	/*background: #ffffff url(../images/table/tbov.gif) repeat-x;*/
+	background: #ffffff url(../images/table/bg1.png) no-repeat center right;
+	padding-right:1.5em;
+}
+
+tr {
+	vertical-align: top;
+	background-color: #ffffff;
+}
+tr,th,td {
+	padding: .2em;
+
+}
+td {
+	border-left: 1px solid #dadada;
+}
+tfoot tr {
+	background: #fff url(../images/table/bbar.gif) repeat-x;
+}
+tfoot td, tfoot th{
+	color: #000;
+	border: 0px;
+}
+
+th.headerSortUp {
+	
+	background-image: url(../images/table/asc.png);
+	background-repeat: no-repeat;
+	background-position: center right;
+	
+	
+} 
+th.headerSortDown { 
+	
+    background-image: url(../images/table/desc.png);
+	background-repeat: no-repeat; 
+	background-position: center right;
+	
+} 
+
+/* expand/collapse */
+		table .collapsible {
+			padding: 0 0 3px 0;
+		}
+
+		.collapsible a.collapsed {
+			margin: 2px;
+			display: block;
+			width: 15px;
+			height: 15px;
+			background: url(../images/table/tablesorter_expand.png) no-repeat 3px 3px;
+			outline: 0;
+		}
+		
+		.collapsible a.expanded {
+			margin: 2px;
+			display: block;
+			width: 15px;
+			height: 15px;
+			background: url(../images/table/tablesorter_expand.png) no-repeat -24px 3px;
+			outline: 0;
+		}

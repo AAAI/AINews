@@ -27,6 +27,7 @@ CREATE TABLE `cat_corpus` (
   `url` varchar(1000) NOT NULL,
   `title` varchar(1024) NOT NULL,
   `content` text NOT NULL COMMENT 'full text',
+  `adminrate` int(11) NOT NULL DEFAULT '0',
   PRIMARY KEY (`urlid`) USING BTREE
 ) ENGINE=MyISAM AUTO_INCREMENT=6393 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
