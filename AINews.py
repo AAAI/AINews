@@ -50,21 +50,18 @@ def usage():
             -f, --file      crawl target URLs stored in the file
             -u, --url       crawl one target URL
 
-        (2) categorize:
-            choose topics for all the news.
-            
-        (3) train:
+        (2) train:
             train news classifiers based on human rates.
             
-        (4) rank:
+        (3) rank:
             rank the latest news and generate output files.
             
-        (5) publish:
+        (4) publish:
             publish news from output files to Pmwiki site and send emails.
             It is weekly publish to the public.
             
-        (6) all:
-            Automatically processing crawl, categorize, train, rank, and publish tasks.
+        (5) all:
+            Automatically processing train, crawl, rank, and publish tasks.
             
         View Latest news at:
         http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/AINews
@@ -96,10 +93,6 @@ def crawl(opts):
     if rss_flag:
         crawler.crawl()
 
-def categorize():
-    centroid = AINewsCentroidClassifier()
-    centroid.categorize_all()
-        
 def train():
     svm = AINewsSVM()
     svm.collect_feedback()
@@ -128,7 +121,7 @@ def main():
     # Set en_US, UTF8
     locale.setlocale(locale.LC_ALL,'en_US.UTF-8')
     
-    commands_list = ("crawl", "categorize", "train", "rank", "publish", "all", "help")
+    commands_list = ("train", "crawl", "rank", "publish", "all", "help")
     try:
         if len(sys.argv) < 2 or sys.argv[1] not in commands_list:
             usage()
@@ -141,15 +134,12 @@ def main():
         usage()
         sys.exit(2)
 
-    if command == "crawl":    
-        crawl(opts)
-
-    elif command == "categorize":
-        categorize()
-            
     elif command == "train":
         train()     
         
+    if command == "crawl":    
+        crawl(opts)
+
     elif command == "rank":
         rank()
         
