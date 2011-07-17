@@ -1,0 +1,46 @@
+@charset "utf-8";
+/* -------------------------------------------- */
+/* ------------- Pagination: Clean ------------ */
+/* -------------------------------------------- */
+
+#pagination-clean li          { border:0; margin:0; padding:0; font-size:11px; list-style:none; /* savers */ float:left; }
+/* savers #pagination-clean li,*/
+#pagination-clean a           { border-right:solid 1px #DEDEDE; margin-right:2px; }
+#pagination-clean .previous-off,
+#pagination-clean .next-off   { color:#888888; display:block; float:left; font-weight:bold; padding:3px 4px; }	
+#pagination-clean .next a,
+#pagination-clean previous a  { border:none; font-weight:bold; }	
+#pagination-clean .active     { color:#000000; font-weight:bold; display:block; float:left; padding:4px 6px; /* savers */ border-right:solid 1px #DEDEDE; }
+#pagination-clean a:link,
+#pagination-clean a:visited   { color:#0e509e; display:block; float:left; padding:3px 6px; text-decoration:underline; }
+#pagination-clean a:hover     { text-decoration:none; }
+
+/* -------------------------------------------- */
+/* ----------- Pagination: Digg Style --------- */
+/* -------------------------------------------- */
+	
+#pagination-digg li          { border:0; margin:0; padding:0; font-size:11px; list-style:none; /* savers */ float:left; }
+#pagination-digg a           { border:solid 1px #9aafe5; margin-right:2px; }
+#pagination-digg .previous-off,
+#pagination-digg .next-off   { border:solid 1px #DEDEDE; color:#888888; display:block; float:left; font-weight:bold; margin-right:2px; padding:3px 4px; }
+#pagination-digg .next a,
+#pagination-digg .previous a { font-weight:bold; }	
+#pagination-digg .active     { background:#2e6ab1; color:#FFFFFF; font-weight:bold; display:block; float:left; padding:4px 6px; /* savers */ margin-right:2px; }
+#pagination-digg a:link, 
+#pagination-digg a:visited   { color:#0e509e; display:block; float:left; padding:3px 6px; text-decoration:none; }
+#pagination-digg a:hover     { border:solid 1px #0e509e; }
+
+/* -------------------------------------------- */
+/* ------------- Pagination: Flickr -----------	*/
+/* -------------------------------------------- */
+	
+#pagination-flickr li          { border:0; margin:0; padding:0; font-size:11px; list-style:none; /* savers */ float:left; }
+#pagination-flickr a           { border:solid 1px #DDDDDD; margin-right:2px; }
+#pagination-flickr .previous-off,
+#pagination-flickr .next-off   { color:#666666; display:block; float:left; font-weight:bold; padding:3px 4px; }
+#pagination-flickr .next a,
+#pagination-flickr .previous a { font-weight:bold; border:solid 1px #FFFFFF; }	
+#pagination-flickr .active     { color:#ff0084; font-weight:bold; display:block; float:left; padding:4px 6px; }
+#pagination-flickr a:link, 
+#pagination-flickr a:visited   { color:#0063e3; display:block; float:left; padding:3px 6px; text-decoration:none; }
+#pagination-flickr a:hover     { border:solid 1px #666666; }
