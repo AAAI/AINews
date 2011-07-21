@@ -5,6 +5,7 @@ adaptive system
 afghanistan
 agent
 agriculture
+ai
 ambiguous
 animal
 approachable
@@ -162,11 +163,14 @@ recommendation engine
 recommendation system
 reconnaissance
 representation
+research
 retail
 reverse engineer
 robosoldier
+robot
 russia
 school
+science
 semantic
 semantic analysis
 semantic search
