@@ -1,29 +1,19 @@
 
-import os
-import math
 import sys
-import random
 import re
-from AINewsConfig import paths
-from AINewsTools import loadpickle
-from AINewsDB import AINewsDB
 from AINewsCentroidClassifier import AINewsCentroidClassifier
-from AINewsTextProcessor import AINewsTextProcessor
 
 def find_max_key(models):
     maxes = map(lambda m: max(m.keys()), models)
     return max(maxes)
 
-def load_category(category):
-    file = paths['ainews.category_data'] + "centroid_eval/" + category + ".pkl"
-    return loadpickle(file)
-
 if __name__ == "__main__":
 
     ident = sys.argv[1]
+    strategy = sys.argv[2]
 
     classifier = AINewsCentroidClassifier()
-    corpus = classifier.load_corpus(ident, 1.0)[0]
+    corpus = classifier.load_corpus(ident, 1.0, strategy)[0]
 
     classifier.icsd_pow = 0.0
     classifier.csd_pow = 0.0

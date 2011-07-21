@@ -13,13 +13,15 @@ for row in rows:
 
 for urlid in urlids:
     cats = []
-    rows = db.selectall('select category from cat_corpus_cats where urlid = %d' % urlid)
+    rows = db.selectall('select category from cat_corpus_cats where urlid = %d' % \
+            urlid)
     for row in rows:
         cats.append(row[0])
     
     # choose random single category, update database
-    random.shuffle(cats)
+    #random.shuffle(cats)
     
-    db.execute("insert into cat_corpus_cats_single values(%d, '%s')" % (urlid, cats[0]))
+    db.execute("insert into cat_corpus_cats_single values(%d, '%s')" % \
+            (urlid, cats[0]))
 
 

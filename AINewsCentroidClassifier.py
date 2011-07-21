@@ -101,7 +101,7 @@ class AINewsCentroidClassifier:
         else:
             self.train_centroid(category)
         
-    def train_centroid(self, category, corpus, model_dir, strategy, debug = False):
+    def train_centroid(self, category, corpus, model_dir, debug = False):
         '''
         Train only one centroid of given category.
         Given the input training data in the src_dir, and output centroid
@@ -200,7 +200,7 @@ class AINewsCentroidClassifier:
         self.cache_urls[urlid] = data
         return data
     
-    def predict(self, urlid, wordfreq, strategy):
+    def predict(self, urlid, wordfreq):
         '''
         Predict its category from the 19 centroids
         Given a urlid of news story, retrieve its saved term vector and
@@ -374,9 +374,9 @@ class AINewsCentroidClassifier:
     #
     ##############################
 
-    def load_corpus(self, ident, pct, strategy, debug = False):
+    def load_corpus(self, ident, pct, debug = False):
         source = ident.split(':')[0]
-        name = ident.split(':')[1]
+        name = ident.split(':')[1:]
         if source == "file":
             rows = self.load_file_corpus(name)
         elif source == "db":
@@ -433,8 +433,7 @@ class AINewsCentroidClassifier:
         # init_predict here to establish self.dftext
         self.init_predict(None, 'wordlist_eval')
         for category in self.categories:
-            self.train_centroid(category, train_corpus, 'centroid_eval', \
-                    strategy, debug)
+            self.train_centroid(category, train_corpus, 'centroid_eval', debug)
         
         if debug:
             print
@@ -444,7 +443,7 @@ class AINewsCentroidClassifier:
         return (train_corpus, predict_corpus)
 
     def load_file_corpus(self, name):
-        wordsfile = paths['corpus.corpus_other'] + name + ".mat.clabel"
+        wordsfile = paths['corpus.corpus_other'] + name[0] + ".mat.clabel"
         f = open(wordsfile, 'r')
         self.wordids = {}
         wordid = 1
@@ -452,7 +451,7 @@ class AINewsCentroidClassifier:
             self.wordids[int(wordid)] = line.strip()
             wordid += 1
 
-        catsfile = paths['corpus.corpus_other'] + name + ".mat.rlabel"
+        catsfile = paths['corpus.corpus_other'] + name[0] + ".mat.rlabel"
         f = open(catsfile, 'r')
         cats = {}
         uniqcats = set()
@@ -463,7 +462,7 @@ class AINewsCentroidClassifier:
             docid += 1
         self.categories = list(uniqcats)
 
-        matfile = paths['corpus.corpus_other'] + name + ".mat"
+        matfile = paths['corpus.corpus_other'] + name[0] + ".mat"
         f = open(matfile, 'r')
         f.readline() # ignore first line
         docs = []
@@ -480,13 +479,14 @@ class AINewsCentroidClassifier:
         rows = list(self.db.selectall("""select c.urlid, c.content,
             group_concat(cc.category separator ' ')
             from %s as c, %s as cc
-            where c.urlid = cc.urlid group by c.urlid""" % name.split(':')))
+            where c.urlid = cc.urlid and cc.category != 'NotRelated'
+            group by c.urlid order by c.urlid desc""" % (name[0], name[1])))
         return rows
 
-    def run_strategy(self, predict_corpus, strategy):
+    def run(self, predict_corpus):
         count_matched = 0
         for c in predict_corpus:
-            (topic, topicsims) = self.predict(c[0], c[1], strategy)
+            (topic, topicsims) = self.predict(c[0], c[1])
             if topic in c[2].split(' '):
                 sys.stdout.write('+')
                 count_matched += 1
@@ -495,7 +495,7 @@ class AINewsCentroidClassifier:
             sys.stdout.flush()
         return (100.0*float(count_matched) / float(len(predict_corpus)))
 
-    def evaluate(self, ident, strategy):
+    def evaluate(self, ident):
         '''
         Train on a portion of the corpus, and predict the rest;
         evaluate performance. Various parameters are evaluated.
@@ -509,24 +509,23 @@ class AINewsCentroidClassifier:
         for it in range(0, 4):
             for i in range(5, 10, 2):
                 pct = i/10.0
-                predict_corpus = self.load_corpus(ident, pct, strategy, True)[1]
-                if strategy == "icsd":
-                    for icsd_pow in range(0, 5):
-                        for csd_pow in range(0, 5):
-                            for sd_pow in range(0, 5):
-                                iteration += 1
-                                self.icsd_pow = 1.0 - icsd_pow * 0.5
-                                self.csd_pow = 1.0 - csd_pow * 0.5
-                                self.sd_pow = 1.0 - sd_pow * 0.5
-                                rkey = "%d%%, icsd=%.2f, csd=%.2f, sd=%.2f" % \
-                                        (10*i, self.icsd_pow, self.csd_pow, \
-                                        self.sd_pow)
-                                results.setdefault(rkey, [])
-                                result = self.run_strategy(predict_corpus, strategy)
-                                results[rkey].append(result)
-                                print
-                                print ("%d/%d - Matched (%s): %f%%") % \
-                                    (iteration, iterations, rkey, result)
+                predict_corpus = self.load_corpus(ident, pct, True)[1]
+                for icsd_pow in range(0, 5):
+                    for csd_pow in range(0, 5):
+                        for sd_pow in range(0, 5):
+                            iteration += 1
+                            self.icsd_pow = 1.0 - icsd_pow * 0.5
+                            self.csd_pow = 1.0 - csd_pow * 0.5
+                            self.sd_pow = 1.0 - sd_pow * 0.5
+                            rkey = "%d%%, icsd=%.2f, csd=%.2f, sd=%.2f" % \
+                                    (10*i, self.icsd_pow, self.csd_pow, \
+                                    self.sd_pow)
+                            results.setdefault(rkey, [])
+                            result = self.run(predict_corpus)
+                            results[rkey].append(result)
+                            print
+                            print ("%d/%d - Matched (%s): %f%%") % \
+                                (iteration, iterations, rkey, result)
         print
         print "Summary:"
         for rkey in sorted(results.keys()):
@@ -536,26 +535,25 @@ class AINewsCentroidClassifier:
             print results[rkey]
             print
 
-        if strategy == "icsd":
-            print "icsd:"
-            for (word,val) in (sorted(self.icsd.iteritems(),
+        print "icsd:"
+        for (word,val) in (sorted(self.icsd.iteritems(),
+                key=operator.itemgetter(1), reverse=True))[0:10]:
+            print "%s: %.2f" % (word, val),
+        print
+        print "csd:"
+        for cat in self.csd:
+            print cat
+            for (word,val) in (sorted(self.csd[cat].iteritems(),
                     key=operator.itemgetter(1), reverse=True))[0:10]:
                 print "%s: %.2f" % (word, val),
             print
-            print "csd:"
-            for cat in self.csd:
-                print cat
-                for (word,val) in (sorted(self.csd[cat].iteritems(),
-                        key=operator.itemgetter(1), reverse=True))[0:10]:
-                    print "%s: %.2f" % (word, val),
-                print
-                print
             print
-            print "sd:"
-            for (word,val) in (sorted(self.sd.iteritems(),
-                    key=operator.itemgetter(1), reverse=True))[0:10]:
-                print "%s: %.2f" % (word, val),
-            print
+        print
+        print "sd:"
+        for (word,val) in (sorted(self.sd.iteritems(),
+                key=operator.itemgetter(1), reverse=True))[0:10]:
+            print "%s: %.2f" % (word, val),
+        print
 
 
 """
@@ -587,10 +585,8 @@ if __name__ == "__main__":
     if sys.argv[1] == "train":
         cat.train()
     elif sys.argv[1] == "evaluate":
-        cat.evaluate(sys.argv[2], sys.argv[3])
+        cat.evaluate(sys.argv[2])
         
     print "\n\n"
     print datetime.now() - start   
-       
-        
-     
+
