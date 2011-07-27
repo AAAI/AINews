@@ -13,7 +13,6 @@ Near-duplicated news clustering is the first processing during Ranking.
 import math
 from datetime import date, timedelta
 
-from AINewsDB import AINewsDB
 from AINewsConfig import config
 from AINewsTools import unescape
 
@@ -29,10 +28,6 @@ class AINewsSim:
     are discarded.
     """
     def __init__(self, near = 3, far = 140):
-        self.db = AINewsDB()
-        totaldoc = self.db.selectone('select count(*) from urllist')
-        self.logD = math.log(totaldoc[0] + 1, 2)
-        self.tfidfs = {}
         self.dates = {}
         self.cluster = []
         self.cluster_centroid = []
@@ -69,20 +64,7 @@ class AINewsSim:
             if urlid not in self.dupids:
                 no_dupids.append(urlid)
         return self.cluster_centroid, no_dupids, self.simnews
-        
-        
-    def sim(self, docid1, docid2):
-        """
-        Compute the similarity value between two story documents.
-        """
-        doc1 = self.get_tfidf(docid1)
-        doc2 = self.get_tfidf(docid2)
-        simval = 0.0
-        for wordid in doc1:
-            if wordid in doc2:
-                simval += doc1[wordid] * doc2[wordid]
-        return simval
-    
+
     def set_temporal(self, near, far):
         """
         Setting the temporal function's parameters for computing
@@ -90,15 +72,16 @@ class AINewsSim:
         """
         self.near = near
         self.far = far
-    
-    def temporal_coefficient(self, docid1, docid2):
+
+    def temporal_coefficient(self, date1, date2):
         """
         Measure the temporal weight coefficient by multiplying on the simval.
         To reduce the simval if two news pub-dates are far apart.
         """
-        date1 = self.dates[docid1]
-        date2 = self.dates[docid2]
-        datedelta = math.fabs((date2-date1).days)
+        if date1 == None or date2 == None:
+            datedelta = 0.0
+        else:
+            datedelta = math.fabs((date2-date1).days)
             
         if datedelta <= self.near:
             return 1.0
@@ -107,41 +90,7 @@ class AINewsSim:
         else:
             #return 1.0*(self.far-datedelta)/(self.far-self.near)
             return 0.5*math.cos((datedelta-self.near)*math.pi/(self.far-self.near))+0.5
-        
 
-    def get_tfidf(self, urlid):
-        """
-        Measure the tfidf value of the bag of words for each story.
-        @param urlid: urlid of the news story
-        @type urlid: C{int}
-        """
-        if urlid in self.tfidfs:
-            return self.tfidfs[urlid]
-        
-        doc = {}
-        sql = "select t.wordid, t.freq, w.dftext from textwordurl as t,\
-                wordlist as w where t.urlid = %d and t.wordid = w.rowid" % urlid
-        rows = self.db.selectall(sql)
-        sqsum = 0.0
-        for row in rows:
-            
-            val = math.log(row[1] + 1, 2) * (self.logD - math.log(row[2]+1, 2))
-            #val = row[1] * (self.logD - math.log(row[2]+1, 2))
-            doc[row[0]] = val
-            sqsum += val * val
-        dist = math.sqrt(sqsum)
-        for key in doc:
-            doc[key] /= dist
-            
-        self.tfidfs[urlid] = doc
-        
-        # Search and cache date
-        sql = "select pubdate from urllist where rowid = '%s'" % (urlid)
-        row = self.db.selectone(sql)
-        self.dates[urlid] = row[0]                  # object type datetime.date
-        
-        return doc
-    
     def add_link(self, i, j):
         """
         All similar news stories are clustered in corresponding set. This
@@ -203,15 +152,3 @@ class AINewsSim:
             self.cluster_centroid.append(max_id)
             self.simnews[max_id] = c
    
-
-            
-    def sim_centroid(self, centroid, urlid):
-        '''
-        Compute the similarity between a news and a centroid of that cluster.
-        '''
-        doc = self.get_tfidf(urlid)
-        simval = 0.0
-        for wordid in doc:
-            simval += centroid[wordid] * doc[wordid]
-        return simval
-            

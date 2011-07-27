@@ -22,54 +22,27 @@ import math
 import random
 import operator
 from subprocess import *
-from itertools import izip
 import time
 from datetime import date, datetime, timedelta
 
-from AINewsDB import AINewsDB
-from AINewsTextProcessor import AINewsTextProcessor
+from AINewsCorpus import AINewsCorpus
 from AINewsTools import loadfile2, savefile, savepickle, loadpickle, loadfile
 from AINewsConfig import config, paths
 
 
 class AINewsCentroidClassifier:
-    def __init__(self):
+    def __init__(self, corpus = None):
         '''
         Initialization of centroid classifier for 19 AI-topic 
         '''
         period = int(config['ainews.period'])
         self.begindate = date.today() - timedelta(days = period)
+        self.models = {}
+        if corpus != None:
+            self.corpus = corpus
+        else:
+            self.corpus = AINewsCorpus()
 
-        self.txtpro = AINewsTextProcessor()
-        self.db = AINewsDB()
-        self.corpus_count = (self.db.selectone('select count(*) from cat_corpus'))[0]
-        self.cache_urls = {}
-
-        self.wordlist = {}
-        self.wordids = {}
-
-        self.categories =["AIOverview","Agents", "Applications", \
-                 "CognitiveScience","Education","Ethics", "Games", "History",\
-                 "Interfaces","MachineLearning","NaturalLanguage","Philosophy",\
-                 "Reasoning","Representation", "Robots","ScienceFiction",\
-                 "Speech", "Systems","Vision"]
-        
-        self.tfijk = {}
-        self.tfik = {}
-        self.csd = {}
-        for cat in self.categories:
-            self.tfik[cat] = {}
-            self.tfijk[cat] = {}
-            self.csd[cat] = {}
-        self.icsd = {}
-        self.sd = {}
-        self.cat_urlids = {}
-
-        self.icsd_pow = 0.0
-        self.csd_pow = 0.0
-        self.sd_pow = 0.0
-        
-        
     ##############################
     #
     #           Train 
@@ -96,7 +69,7 @@ class AINewsCentroidClassifier:
                 self.add_freq_index(wordfreq)
             self.commit_freq_index('wordlist')
                 
-            for category in self.categories:
+            for category in self.corpus.categories:
                 self.train_centroid(category, urlids, 'centroid')
         else:
             self.train_centroid(category)
@@ -131,7 +104,7 @@ class AINewsCentroidClassifier:
         '''
         centroid = {} # will hold final centroid tfidf, indexed by wordid
         for c in corpus:
-            data = self.get_tfidf(c[0], c[1])
+            data = self.corpus.get_tfidf(c[0], c[1])
             for word in data:
                 centroid.setdefault(word, 0.0)
                 centroid[word] += data[word]
@@ -154,7 +127,7 @@ class AINewsCentroidClassifier:
     #           Predict 
     #
     ##############################
-    def init_predict(self, model_dir = None, wordlist_table = 'wordlist'):
+    def init_predict(self, model_dir = None):
         '''
         Initialization prediction by loading 19 centroids from the directory.
         @param  model_dir: 19 centroid models path dir
@@ -162,44 +135,10 @@ class AINewsCentroidClassifier:
         '''
         self.models = {}
         if model_dir != None:
-            for category in self.categories:
+            for category in self.corpus.categories:
                 file = os.path.join(model_dir, category+".pkl")
                 self.models[category] = loadpickle(file)
-        self.dftext = {}
-        self.wordids = {}
-        rows = self.db.selectall('select rowid, word, dftext from %s' % wordlist_table)
-        for row in rows:
-            self.wordids[row[0]] = row[1]
-            self.dftext[row[1]] = (row[0], row[2])
-            
-    def get_tfidf(self, urlid, wordfreq):
-        """
-        Helper function to retrieve the tfidf of each word based on the urlid.
-        @param  urlid: target news story's urlid.
-        @type  urlid: C{int}
-        """
-        if urlid in self.cache_urls:
-            return self.cache_urls[urlid]
-            
-        wordids = {}
-        for word in wordfreq:
-            if word in self.dftext:
-                wordids[self.dftext[word][0]] = (wordfreq[word], self.dftext[word][1])
 
-        data = {}
-        distsq = 0.0
-        for wordid in wordids:
-            tfidf = math.log(wordids[wordid][0] + 1, 2) * (math.log(self.corpus_count, 2) - \
-                 math.log(wordids[wordid][1] + 1, 2))
-            data[wordid] = tfidf
-            distsq += tfidf * tfidf
-        dist = math.sqrt(distsq)
-        if dist > 1.0e-9:
-            for key in data:
-                data[key] /= dist
-        self.cache_urls[urlid] = data
-        return data
-    
     def predict(self, urlid, wordfreq):
         '''
         Predict its category from the 19 centroids
@@ -207,12 +146,12 @@ class AINewsCentroidClassifier:
         compare it with 19 category's centroid. Choose the closest category
         as the news story's category/topic.
         '''
-        data = self.get_tfidf(urlid, wordfreq)
+        data = self.corpus.get_tfidf(urlid, wordfreq)
         max_sim = 0
         max_cat = ""
         similarities = {}
         for cat in self.models:
-            sim = self.cos_sim(data, self.models[cat], cat)
+            sim = self.corpus.cos_sim(data, self.models[cat], cat)
             similarities[cat] = sim
             if sim > max_sim:
                 max_sim = sim
@@ -256,232 +195,11 @@ class AINewsCentroidClassifier:
         for urlid in candidate_urlids:
             self.choose_category(urlid)
 
-    def get_icsd(self, word):
-        if word in self.icsd:
-            return self.icsd[word]
-        self.icsd[word] = 0.0
-        for cat in self.categories:
-            tmp = self.tfik[cat][word]
-            for cat2 in self.categories:
-                tmp -= (self.tfik[cat2][word] / float(len(self.categories)))
-            tmp = tmp*tmp
-            self.icsd[word] += tmp / float(len(self.categories))
-        self.icsd[word] = math.sqrt(self.icsd[word])
-        return self.icsd[word]
-
-    def get_csd(self, cat, word):
-        if cat in self.csd:
-            if word in self.csd[cat]:
-                return self.csd[cat][word]
-        else:
-            self.csd[cat] = {}
-
-        self.csd[cat][word] = 0.0
-        for urlid in self.cat_urlids[cat]:
-            if word in self.tfijk[cat][urlid]:
-                tmp = self.tfijk[cat][urlid][word] - self.tfik[cat][word]
-            else:
-                tmp = 0 - self.tfik[cat][word]
-            self.csd[cat][word] += tmp*tmp / float(len(self.cat_urlids[cat]))
-        self.csd[cat][word] = math.sqrt(self.csd[cat][word])
-        return self.csd[cat][word]
-
-    def get_sd(self, word):
-        if word in self.sd:
-            return self.sd[word]
-
-        sub = 0.0
-        for cat in self.categories:
-            for urlid in self.tfijk[cat]:
-                if word in self.tfijk[cat][urlid]:
-                    sub += float(self.tfijk[cat][urlid][word]) / self.cat_totals
-        self.sd[word] = 0.0
-        for cat in self.categories:
-            for urlid in self.tfijk[cat]:
-                if word in self.tfijk[cat][urlid]:
-                    tmp = self.tfijk[cat][urlid][word] - sub
-                else:
-                    tmp = 0 - sub
-                self.sd[word] += tmp*tmp / self.cat_totals
-        self.sd[word] = math.sqrt(self.sd[word])
-        return self.sd[word]
-
-    def cos_sim(self, data, centroid, category = None):
-        '''
-        A helper function to compute the cos simliarity between
-        news story and centroid.
-        @param  data: target news story tfidf vector.
-        @type  data: C{dict}
-        @param centroid: centroid tfidf vector.
-        @type  centroid: C{dict}
-        '''
-        sim = 0.0
-        for key in data:
-            if key in centroid:
-                word = self.wordids[key]
-                d = data[key]
-                c = centroid[key]
-                tdf = math.pow(self.get_icsd(word), self.icsd_pow) * \
-                        math.pow(self.get_sd(word), self.sd_pow)
-                if category != None and self.get_csd(category, word) != 0.0:
-                    tdf *= math.pow(self.get_csd(category, word), self.csd_pow)
-                sim += c*d*tdf
-        return sim
-
-    def add_freq_index(self, urlid, wordfreq, categories = []):
-        for cat in categories:
-            self.tfijk[cat][urlid] = {}
-        for word in wordfreq:
-            self.wordlist.setdefault(word, 0)
-            self.wordlist[word] += 1
-
-            for cat in categories:
-                self.tfijk[cat][urlid].setdefault(word, 0)
-                self.tfijk[cat][urlid][word] += wordfreq[word]
-
-            for cat in self.categories:
-                self.tfik[cat].setdefault(word, 0)
-            for cat in categories:
-                self.tfik[cat][word] += wordfreq[word]
-
-    def commit_freq_index(self, table):
-        # calculate tfik
-        for cat in self.categories:
-            for word in self.tfik[cat]:
-                if len(self.cat_urlids[cat]) > 0:
-                    self.tfik[cat][word] /= float(len(self.cat_urlids[cat]))
-
-        self.cat_totals = 0.0
-        for cat in self.categories:
-            self.cat_totals += float(len(self.cat_urlids[cat]))
-
-        self.icsd = {}
-        self.csd = {}
-        self.sd = {}
-
-        for word in self.wordlist:
-            rowid = self.db.execute("insert into "+table+" (word, dftext) values(%s, %s)", \
-                        (word, self.wordlist[word]))
-            self.wordids[rowid] = word
-        self.wordlist = {}
-
-
-
-
     ##############################
     #
     #           Evaluate
     #
     ##############################
-
-    def load_corpus(self, ident, pct, debug = False):
-        source = ident.split(':')[0]
-        name = ident.split(':')[1:]
-        if source == "file":
-            rows = self.load_file_corpus(name)
-        elif source == "db":
-            rows = self.load_db_corpus(name)
-
-        random.shuffle(rows)
-        offset = int(len(rows)*pct)
-        if debug:
-            print "Selecting random %d%% of corpus (%d docs)." % \
-                    (pct * 100, offset)
-
-        train_corpus = []
-        for row in rows[0:offset]:
-            if source == "db":
-                wordfreq = self.txtpro.whiteprocess(row[0], row[1])
-                if wordfreq.N() > 0:
-                    train_corpus.append((row[0], wordfreq, row[2]))
-            else:
-                train_corpus.append(row)
-        self.corpus_count = len(train_corpus)
-
-        predict_corpus = []
-        for row in rows[offset:offset+int(len(rows)*0.1)]:
-            if source == "db":
-                wordfreq = self.txtpro.whiteprocess(row[0], row[1])
-                if wordfreq.N() > 0:
-                    predict_corpus.append((row[0], wordfreq, row[2]))
-            else:
-                predict_corpus.append(row)
-
-        self.db.execute("delete from wordlist_eval")
-        self.db.execute("alter table wordlist_eval auto_increment = 0")
-        self.wordids = {}
-        self.cache_urls = {}
-        self.tfijk = {}
-        self.tfik = {}
-        for cat in self.categories:
-            self.tfik[cat] = {}
-            self.tfijk[cat] = {}
-        self.cat_urlids = {}
-        for cat in self.categories:
-            self.cat_urlids[cat] = []
-        for c in train_corpus:
-            for cat in c[2].split(' '):
-                self.cat_urlids[cat].append(c[0])
-
-        for c in train_corpus:
-            if debug:
-                sys.stdout.write('.')
-                sys.stdout.flush()
-            self.add_freq_index(c[0], c[1], c[2].split())
-        self.commit_freq_index('wordlist_eval')
-
-        # init_predict here to establish self.dftext
-        self.init_predict(None, 'wordlist_eval')
-        for category in self.categories:
-            self.train_centroid(category, train_corpus, 'centroid_eval', debug)
-        
-        if debug:
-            print
-        # init_predict here to establish newly trained models
-        self.init_predict(paths['ainews.category_data']+'centroid_eval/',
-                'wordlist_eval')
-        return (train_corpus, predict_corpus)
-
-    def load_file_corpus(self, name):
-        wordsfile = paths['corpus.corpus_other'] + name[0] + ".mat.clabel"
-        f = open(wordsfile, 'r')
-        self.wordids = {}
-        wordid = 1
-        for line in f:
-            self.wordids[int(wordid)] = line.strip()
-            wordid += 1
-
-        catsfile = paths['corpus.corpus_other'] + name[0] + ".mat.rlabel"
-        f = open(catsfile, 'r')
-        cats = {}
-        uniqcats = set()
-        docid = 0
-        for line in f:
-            cats[docid] = line.strip()
-            uniqcats.add(line.strip())
-            docid += 1
-        self.categories = list(uniqcats)
-
-        matfile = paths['corpus.corpus_other'] + name[0] + ".mat"
-        f = open(matfile, 'r')
-        f.readline() # ignore first line
-        docs = []
-        docid = 0
-        for line in f:
-            wordfreq = {}
-            for (wordid, freq) in izip(*[iter(line.split())]*2):
-                wordfreq[self.wordids[int(wordid)]] = int(float(freq))
-            docs.append((docid, wordfreq, cats[docid]))
-            docid += 1
-        return docs
-
-    def load_db_corpus(self, name):
-        rows = list(self.db.selectall("""select c.urlid, c.content,
-            group_concat(cc.category separator ' ')
-            from %s as c, %s as cc
-            where c.urlid = cc.urlid and cc.category != 'NotRelated'
-            group by c.urlid order by c.urlid desc""" % (name[0], name[1])))
-        return rows
 
     def run(self, predict_corpus):
         count_matched = 0
@@ -509,17 +227,24 @@ class AINewsCentroidClassifier:
         for it in range(0, 4):
             for i in range(5, 10, 2):
                 pct = i/10.0
-                predict_corpus = self.load_corpus(ident, pct, True)[1]
+                (train_corpus, predict_corpus) = \
+                        self.corpus.load_corpus(ident, pct, True)
+                for category in self.corpus.categories:
+                    self.train_centroid(category, train_corpus, 'centroid_eval', True)
+                print
+                # init_predict here to establish newly trained models
+                self.init_predict(paths['ainews.category_data']+'centroid_eval/')
+
                 for icsd_pow in range(0, 5):
                     for csd_pow in range(0, 5):
                         for sd_pow in range(0, 5):
                             iteration += 1
-                            self.icsd_pow = 1.0 - icsd_pow * 0.5
-                            self.csd_pow = 1.0 - csd_pow * 0.5
-                            self.sd_pow = 1.0 - sd_pow * 0.5
+                            self.corpus.icsd_pow = 1.0 - icsd_pow * 0.5
+                            self.corpus.csd_pow = 1.0 - csd_pow * 0.5
+                            self.corpus.sd_pow = 1.0 - sd_pow * 0.5
                             rkey = "%d%%, icsd=%.2f, csd=%.2f, sd=%.2f" % \
-                                    (10*i, self.icsd_pow, self.csd_pow, \
-                                    self.sd_pow)
+                                    (10*i, self.corpus.icsd_pow, \
+                                    self.corpus.csd_pow, self.corpus.sd_pow)
                             results.setdefault(rkey, [])
                             result = self.run(predict_corpus)
                             results[rkey].append(result)

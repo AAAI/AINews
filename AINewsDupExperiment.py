@@ -13,9 +13,12 @@ Date: Dec. 13th, 2010
 import time
 from datetime import datetime
 
-from AINewsDupManager import AINewsDupManager
+from AINewsCorpus import AINewsCorpus
 from AINewsSim import AINewsSim
-from LuceneSim import LuceneSim
+from AINewsDB import AINewsDB
+from AINewsConfig import paths
+from AINewsTools import loadpickle, savepickle
+#from LuceneSim import LuceneSim
 
 """
 The following 20 pairs of duplicated news set
@@ -23,8 +26,37 @@ are manually created among 351 crawled AI news whose id are in range (314-664)
 """
 
 duplists = [
+    ([1604, 1606], "Lovotics"),
+    ([1073, 1072, 1067, 1066], "Geminoid"),
+    ([1033, 1029], "paintball robot"),
+    ([1019, 999], "Robots become self-aware"),
+    ([996, 1002], "humanoid robot in space"),
+    ([985, 987, 1004, 997, 1008, 1017, 1027], "Japan robot marathon"),
+    ([995, 994, 996, 998, 1015, 1014, 1006, 1024, 986], "Shuttle Discovery"),
+    ([929, 915], "Androidify"),
+    ([914, 952], "X-prize"),
+    ([896, 886, 935], "Robot internet"),
+    ([901, 897], "Scones"),
+    ([904, 902], "Baby robot"),
+    ([884, 883], "Super bowl robot"),
+    ([933, 946], "when robots attack"),
+    ([861, 856], "Kno tablet"),
+    ([846, 854], "Can machines fall in love"),
+    ([833, 832], "Health checkup"),
+    ([821, 831, 840], "robot babies"),
+    ([834, 843], "quadrotors"),
+    ([842, 850], "fingers"),
+    ([857, 872], "rubber"),
+    ([859, 879], "sick kids"),
+    ([866, 871], "keepon"),
+    ([869, 894], "ephaptic coupling"),
+    ([824, 839, 847], "monkey see"),
+    ([804, 811, 830, 878], "kinect"),
+    ([716, 715, 717], "Korean teachers"),
+    ([674, 676, 729], "CES 2011"),
+    ([668, 667, 734, 794, 789, 787, 885, 881, 880, 893, 909, 925, 922, 921, 920, 918, 917, 934, 930, 926, 944, 942, 938, 937, 936, 955, 954, 958, 947, 963, 962, 968, 970, 973, 969, 1065, 1060], "Jeopardy Watson"),
     ([663, 664], "WikiLeak"),
-    ([659, 661], "Robot Restaurant China"),
+    ([659, 661, 693, 688], "Robot Restaurant China"),
     ([629, 626, 625, 622, 620, 617, 618], "NewZealand Mine Crash"),
     ([601, 583, 633, 604], "Kinect hack"),
     ([582, 585], "Undersea Robot"),
@@ -53,12 +85,25 @@ duplists = [
     ([336, 329], "Robot Pyramid secret"),
     ([335, 349], "NASA Robonaut 2"),
     ([331, 334, 341, 369], "Spacewalker repair station"),
-    ([323, 504], "Teleconference robot")
-]
+    ([323, 504], "Teleconference robot")]
 
-# ID range [314, 664]
-id_begin = 314
-id_end = 665
+duplist_stored = []
+try:
+    duplist_stored = loadpickle(paths['corpus.duplist'])
+except:
+    pass
+
+notduplist_stored = set()
+try:
+    notduplist_stored = loadpickle(paths['corpus.notduplist'])
+except:
+    pass
+duplists += duplist_stored
+
+corpus = AINewsCorpus()
+
+id_begin = 315
+id_end = 1200
 ####################################
 # idset records all the news id
 ####################################
@@ -71,13 +116,8 @@ for dupset in duplists:
     sortedlist = sorted(dupset[0])
     for i in range(n-1):
         for j in range(i+1, n):
-            checklist.add(tuple([sortedlist[i],sortedlist[j]]))
+            checklist.add(tuple([int(sortedlist[i]),int(sortedlist[j])]))
 
-def create():
-    dupmgr = AINewsDupManager()
-    for dupset in duplists:
-        dupmgr.create_dupset(dupset[0], dupset[0][0], dupset[1])
-        
 def compute_sim(aisim):
     group = 0
     for dupset in duplists:
@@ -88,41 +128,35 @@ def compute_sim(aisim):
                 print aisim.sim(dupset[0][i], dupset[0][j])
         group +=1
 
-
-def frange(begin, end, step):
-    while begin < end:
-        yield begin
-        begin += step
-        
-    
-    
-def recallprecision(urllist, aisim):
+def recallprecision(docs, aisim):
     """
     recall and precision for simularity method, make all pairs from urllist
     and compute the similarity.
     """
     truepos = {}
     falsepos = {}
-    #cutoff range [0.05, 0.7]
-    cutoff_begin = 10
-    cutoff_end = 51
+    #cutoff range [0.01, 1.0]
+    cutoff_begin = 0
+    cutoff_end = 100
     for cutoff in range(cutoff_begin, cutoff_end):
         truepos[cutoff]=0
         falsepos[cutoff]=0
     
     total = 0
     pos = 0
-    N = len(urllist)
-    progress_step = N*(N-1)/200
+    N = len(docs)
+    progress_step = N*(N-1)/200.0
     
     simvals = {}
     for i in range(0, N-1):
-        print "Progress:", 1.0*total/progress_step, "%"
+        if (i % (N/10)) == 0:
+            print "Progress: %.0f%%" % (float(total)/progress_step)
         for j in range(i+1, N):
-            val = aisim.sim(urllist[i], urllist[j])
+            key = (int(docs[i][0]), int(docs[j][0]))
+            val = corpus.sim(docs[i], docs[j])
             total += 1
-            simvals[(urllist[i], urllist[j])] = val
-            if (urllist[i], urllist[j]) in checklist:
+            simvals[key] = val
+            if key in checklist:
                 flag = True
                 pos += 1
             else:
@@ -134,6 +168,8 @@ def recallprecision(urllist, aisim):
                     if flag:
                         truepos[x] += 1
                     else:
+                        #if cutoff >= 0.1 and cutoff < 0.11:
+                        #    print "false pos:", key, cutoff
                         falsepos[x] += 1
                 cutoff += 0.01
             
@@ -145,8 +181,11 @@ def recallprecision(urllist, aisim):
         if truepos[cutoff]==0 and falsepos[cutoff]==0:
             precision = 0
         else:
-            precision = truepos[cutoff]*1.0/(truepos[cutoff]+falsepos[cutoff])
-        recall = truepos[cutoff]*1.0/pos
+            precision = float(truepos[cutoff])/(truepos[cutoff]+falsepos[cutoff])
+        if pos == 0:
+            recall = 0
+        else:
+            recall = float(truepos[cutoff])/pos
         if precision == 0 and recall == 0:
             f1 = 0
         else:
@@ -160,9 +199,43 @@ def recallprecision(urllist, aisim):
     print "cutoff:",best_cutoff*.01, "True Pos:", \
             truepos[best_cutoff], "False Pos:", falsepos[best_cutoff],\
             "precision:", best_p, "recall:", best_r, "f1:",best_f1
+    print
+
+    """
+    db = AINewsDB()
+    done = False
+    for i in range(0, N-1):
+        if done: break;
+        for j in range(i+1, N):
+            if done: break;
+            key = (int(docs[i][0]), int(docs[j][0]))
+            if key in notduplist_stored: continue
+            val = corpus.sim(docs[i], docs[j])
+            if key not in checklist and val >= (best_cutoff*0.01):
+                (title1, desc1, date1) = db.selectone( \
+                        "select title,description,pubdate from urllist " +
+                        "where rowid = %s" % docs[i][0])
+                (title2, desc2, date2) = db.selectone( \
+                        "select title,description,pubdate from urllist " +
+                        "where rowid = %s" % docs[j][0])
+                print "-- %s (%s)\n\n%s\n\n-- %s (%s)\n\n%s\n\n" % \
+                        (title1, str(date1), desc1, title2, str(date2), desc2)
+                answer = raw_input("Duplicates? (y/n/q): ")
+                if answer == "y" or answer == "Y":
+                    duplist_stored.append(([key[0], key[1]], "duplist_stored"))
+                if answer == "n" or answer == "N":
+                    notduplist_stored.add(key)
+                elif answer == "q" or answer == "Q":
+                    done = True
+                print "\n\n----------------\n\n"
+    savepickle(paths['corpus.notduplist'], notduplist_stored)
+    savepickle(paths['corpus.duplist'], duplist_stored)
+
+    """
             
-    for near in range(2, 6):
-        for far in range(120,151,10):
+    for near in range(1, 21, 2):
+        for far in range(1, 21, 2):
+            if near > far: continue
             print near, far,
             aisim.set_temporal(near, far)
             pos = 0
@@ -171,9 +244,10 @@ def recallprecision(urllist, aisim):
                 falsepos[cutoff]=0
             for i in range(0,N-1):
                 for j in range(i+1, N):
-                    val = simvals[(urllist[i], urllist[j])]
-                    val *= aisim.temporal_coefficient(urllist[i],urllist[j])
-                    if (urllist[i], urllist[j]) in checklist:
+                    key = (int(docs[i][0]), int(docs[j][0]))
+                    val = simvals[key]
+                    val *= aisim.temporal_coefficient(docs[i][3], docs[j][3])
+                    if key in checklist:
                         flag = True
                         pos += 1
                     else:
@@ -187,7 +261,7 @@ def recallprecision(urllist, aisim):
                             else:
                                 falsepos[x] += 1
                         cutoff += 0.01
-            
+
             best_cutoff = 0
             best_f1 = 0
             best_p = 0
@@ -207,19 +281,11 @@ def recallprecision(urllist, aisim):
                     best_cutoff = cutoff
                     best_p = precision
                     best_r = recall
-                """
-                print "cutoff:", cutoff*.01
-                print "\tTrue Pos:", truepos[cutoff]
-                print "\tFalse Pos:", falsepos[cutoff]
-                print "\tpresision:",precision
-                print "\trecall:", recall
-                print "\tf1:", f1
-                """
             print "cutoff:",best_cutoff*.01, "True Pos:", \
                     truepos[best_cutoff], "False Pos:", falsepos[best_cutoff],\
                     "precision:", best_p, "recall:", best_r, "f1:",best_f1
-        
-   
+
+
 ##########################################
 #
 #      Testing
@@ -232,25 +298,20 @@ SEPARATE,ALL,NOTITLE = range(3)
 if __name__ == "__main__":
     start = datetime.now()
     type = COSINE_RECALLPRECISION
-    
+
+    urllist = map(lambda urlid: str(urlid), range(id_begin, id_end))
+
+    (train_corpus, predict_corpus) = corpus.load_corpus( \
+            "urllist:urllist:"+','.join(urllist), 1.0, True)
     
     # LuceneSim Parameters
     index_dir = "lucene/wiki"
     hit_num = 100
     querier_type = SEPARATE
     
-    #range(314, 665), 48.0
-    if type == CREATE:
-        create()
-    if type == COSINE:
+    if type == COSINE_RECALLPRECISION:
         aisim = AINewsSim()
-        compute_sim(aisim)
-    elif type == COSINE_ONE:
-        aisim = AINewsSim()
-        print aisim.sim(314, 321)
-    elif type == COSINE_RECALLPRECISION:
-        aisim = AINewsSim()
-        recallprecision(range(314, 665), aisim)
+        recallprecision(train_corpus, aisim)
     elif type == LUCENE:
         aisim = LuceneSim(index_dir, hit_num, querier_type)
         compute_sim(aisim)
