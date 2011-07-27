@@ -25,6 +25,13 @@ class AINewsTextProcessor:
         """
         self.debug = config['ainews.debug']
         self.cache = {}
+        self.stemmer = nltk.stem.PorterStemmer()
+
+    def stem(self, word):
+        if word[0].islower():
+            return self.stemmer.stem(word)
+        else:
+            return word
         
     def unigrams(self, raw):
         """
@@ -64,8 +71,7 @@ class AINewsTextProcessor:
         if urlid in self.cache:
             return self.cache[urlid]
 
-        stemmer = nltk.stem.PorterStemmer()
-        unigrams = map(lambda w: stemmer.stem(w), self.unigrams(raw))
+        unigrams = map(lambda w: self.stem(w), self.unigrams(raw))
         self.cache[urlid] = nltk.FreqDist(unigrams)
         return self.cache[urlid]
 
@@ -76,9 +82,7 @@ class AINewsTextProcessor:
         if urlid in self.cache:
             return self.cache[urlid]
 
-        stemmer = nltk.stem.PorterStemmer()
-
-        unigrams = map(lambda w: stemmer.stem(w), self.unigrams(raw))
+        unigrams = map(lambda w: self.stem(w), self.unigrams(raw))
         words_all = unigrams
         for (a,b) in self.bigrams(unigrams):
             if ' ' in a or ' ' in b: continue
