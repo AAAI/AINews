@@ -11,6 +11,7 @@ Author: Liang Dong
 Date: Dec. 13th, 2010
 """
 import time
+import math
 from datetime import datetime
 
 from AINewsCorpus import AINewsCorpus
@@ -103,7 +104,7 @@ duplists += duplist_stored
 corpus = AINewsCorpus()
 
 id_begin = 315
-id_end = 1200
+id_end = 1400
 ####################################
 # idset records all the news id
 ####################################
@@ -162,9 +163,13 @@ def recallprecision(docs, aisim):
             else:
                 flag = False
                 
+            if docs[i][3] == None or docs[j][3] == None:
+                datedelta = 0.0
+            else:
+                datedelta = math.fabs((docs[i][3]-docs[j][3]).days)
             cutoff = cutoff_begin*0.01
             for x in range(cutoff_begin,cutoff_end):
-                if val >= cutoff:
+                if datedelta < 14 and val >= cutoff:
                     if flag:
                         truepos[x] += 1
                     else:
@@ -201,7 +206,6 @@ def recallprecision(docs, aisim):
             "precision:", best_p, "recall:", best_r, "f1:",best_f1
     print
 
-    """
     db = AINewsDB()
     done = False
     for i in range(0, N-1):
@@ -218,6 +222,11 @@ def recallprecision(docs, aisim):
                 (title2, desc2, date2) = db.selectone( \
                         "select title,description,pubdate from urllist " +
                         "where rowid = %s" % docs[j][0])
+                if date1 == None or date2 == None:
+                    datedelta = 0.0
+                else:
+                    datedelta = math.fabs((date1-date2).days)
+                if datedelta > 14: continue
                 print "-- %s (%s)\n\n%s\n\n-- %s (%s)\n\n%s\n\n" % \
                         (title1, str(date1), desc1, title2, str(date2), desc2)
                 answer = raw_input("Duplicates? (y/n/q): ")
@@ -231,8 +240,7 @@ def recallprecision(docs, aisim):
     savepickle(paths['corpus.notduplist'], notduplist_stored)
     savepickle(paths['corpus.duplist'], duplist_stored)
 
-    """
-            
+"""
     for near in range(1, 21, 2):
         for far in range(1, 21, 2):
             if near > far: continue
@@ -253,9 +261,13 @@ def recallprecision(docs, aisim):
                     else:
                         flag = False
                         
+                    if docs[i][3] == None or docs[j][3] == None:
+                        datedelta = 0.0
+                    else:
+                        datedelta = math.fabs((docs[i][3]-docs[j][3]).days)
                     cutoff = cutoff_begin*0.01
                     for x in range(cutoff_begin,cutoff_end):
-                        if val >= cutoff:
+                        if datedelta < 14 and val >= cutoff:
                             if flag:
                                 truepos[x] += 1
                             else:
@@ -284,7 +296,7 @@ def recallprecision(docs, aisim):
             print "cutoff:",best_cutoff*.01, "True Pos:", \
                     truepos[best_cutoff], "False Pos:", falsepos[best_cutoff],\
                     "precision:", best_p, "recall:", best_r, "f1:",best_f1
-
+"""
 
 ##########################################
 #
