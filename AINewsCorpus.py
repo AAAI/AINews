@@ -48,7 +48,6 @@ class AINewsCorpus:
         """
         if urlid in self.cache_urls:
             return self.cache_urls[urlid]
-            
         wordids = {}
         for word in wordfreq:
             if word in self.dftext:
@@ -188,6 +187,45 @@ class AINewsCorpus:
             self.dftext[word] = (rowid, self.wordlist[word])
         self.wordlist = {}
 
+    def get_article(self, urlid):
+        # try fetching article from urllist table plus text pickle file
+        row = self.db.selectone("""select c.title, c.topic, c.pubdate
+            from urllist as c where c.rowid = %s and c.topic != 'NotRelated'
+            order by c.rowid desc""" % urlid)
+        if row != None:
+            try:
+                content = loadpickle(paths['ainews.news_data'] + \
+                        "text/"+str(urlid)+".pkl")
+            except: return None
+            wordfreq = self.txtpro.simpletextprocess(urlid, content)
+            return {'urlid': urlid, 'content': content,
+                    'title': row[0], 'wordfreq': wordfreq, \
+                    'topics': [row[1]], 'pubdate': row[2]}
+        else:
+            # try fetching article from cat_corpus
+            row = self.db.selectone("""select c.content, c.title,
+                group_concat(cc.category separator ' ')
+                from cat_corpus as c, cat_corpus_cats as cc
+                where c.urlid = %s and c.urlid = cc.urlid
+                and cc.category != 'NotRelated'
+                group by c.urlid order by c.urlid desc""" % urlid)
+            if row != None:
+                wordfreq = self.txtpro.simpletextprocess(urlid, row[0])
+                return {'urlid': urlid, 'content': row[0],
+                        'title': row[1], 'wordfreq': wordfreq, \
+                        'topics': row[2].split(' '), 'pubdate': None}
+            else:
+                return None
+
+    def restore_corpus(self):
+        self.wordids = {}
+        self.dftext = {}
+        rows = self.db.selectall("select rowid, word, dftext from wordlist")
+        for row in rows:
+            self.wordids[row[0]] = row[1]
+            self.dftext[row[1]] = (row[0], row[2])
+        self.corpus_count = self.db.selectone("select count(*) from cat_corpus")[0]
+
     def load_corpus(self, ident, pct, debug = False):
         if debug:
             print "Loading corpus..."
@@ -197,8 +235,6 @@ class AINewsCorpus:
             docs = self.load_file_corpus(name, debug)
         elif source == "db":
             docs = self.load_db_corpus(name, debug)
-        elif source == "urllist":
-            docs = self.load_urllist_corpus(name, debug)
         print
 
         random.shuffle(docs)
@@ -279,7 +315,7 @@ class AINewsCorpus:
             group_concat(cc.category separator ' ')
             from %s as c, %s as cc
             where c.urlid = cc.urlid and cc.category != 'NotRelated'
-            group by c.urlid order by c.urlid desc limit 500""" % (name[0], name[1]))
+            group by c.urlid order by c.urlid desc""" % (name[0], name[1]))
         print "Processing %d articles..." % len(rows)
         docs = []
         for row in rows:
@@ -290,22 +326,4 @@ class AINewsCorpus:
                 sys.stdout.write('.')
                 sys.stdout.flush()
         return docs
-
-    def load_urllist_corpus(self, name, debug = False):
-        urllist = name[1].split(',')
-        docs = []
-        for urlid in urllist:
-            row = self.db.selectone("""select c.rowid, c.topic, c.pubdate
-                from %s as c where c.rowid = %s and c.topic != 'NotRelated'
-                order by c.rowid desc""" % (name[0], urlid))
-            if row != None:
-                content = loadpickle(paths['ainews.news_data']+"text/"+str(urlid)+".pkl")
-                wordfreq = self.txtpro.simpletextprocess(row[0], content)
-                if wordfreq.N() > 0:
-                    docs.append((row[0], wordfreq, row[1], row[2]))
-                if debug:
-                    sys.stdout.write('.')
-                    sys.stdout.flush()
-        return docs
-
 
