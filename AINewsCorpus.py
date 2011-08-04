@@ -25,20 +25,7 @@ class AINewsCorpus:
                  "Reasoning","Representation", "Robots","ScienceFiction",\
                  "Speech", "Systems","Vision"]
         
-        self.tfijk = {}
-        self.tfik = {}
-        self.csd = {}
-        for cat in self.categories:
-            self.tfik[cat] = {}
-            self.tfijk[cat] = {}
-            self.csd[cat] = {}
-        self.icsd = {}
-        self.sd = {}
-        self.cat_urlids = {}
-
-        self.icsd_pow = 0.0
-        self.csd_pow = 0.0
-        self.sd_pow = 0.0
+        self.restore_corpus()
 
     def get_tfidf(self, urlid, wordfreq):
         """
@@ -68,61 +55,7 @@ class AINewsCorpus:
         self.cache_urls[urlid] = data
         return data
 
-    def get_icsd(self, word):
-        if word in self.icsd:
-            return self.icsd[word]
-        self.icsd[word] = 0.0
-        for cat in self.categories:
-            tmp = self.tfik[cat][word]
-            for cat2 in self.categories:
-                tmp -= (self.tfik[cat2][word] / float(len(self.categories)))
-            tmp = tmp*tmp
-            self.icsd[word] += tmp / float(len(self.categories))
-        self.icsd[word] = math.sqrt(self.icsd[word])
-        return self.icsd[word]
-
-    def get_csd(self, cat, word):
-        if cat in self.csd:
-            if word in self.csd[cat]:
-                return self.csd[cat][word]
-        else:
-            self.csd[cat] = {}
-
-        self.csd[cat][word] = 0.0
-        for urlid in self.cat_urlids[cat]:
-            if word in self.tfijk[cat][urlid]:
-                tmp = self.tfijk[cat][urlid][word] - self.tfik[cat][word]
-            else:
-                tmp = 0 - self.tfik[cat][word]
-            self.csd[cat][word] += tmp*tmp / float(len(self.cat_urlids[cat]))
-        self.csd[cat][word] = math.sqrt(self.csd[cat][word])
-        return self.csd[cat][word]
-
-    def get_sd(self, word):
-        if word in self.sd:
-            return self.sd[word]
-
-        sub = 0.0
-        for cat in self.categories:
-            for urlid in self.tfijk[cat]:
-                if word in self.tfijk[cat][urlid]:
-                    sub += float(self.tfijk[cat][urlid][word]) / self.cat_totals
-        self.sd[word] = 0.0
-        for cat in self.categories:
-            for urlid in self.tfijk[cat]:
-                if word in self.tfijk[cat][urlid]:
-                    tmp = self.tfijk[cat][urlid][word] - sub
-                else:
-                    tmp = 0 - sub
-                self.sd[word] += tmp*tmp / self.cat_totals
-        self.sd[word] = math.sqrt(self.sd[word])
-        return self.sd[word]
-
-    def sim(self, doc1, doc2, category = None):
-        return self.cos_sim(self.get_tfidf(doc1[0], doc1[1]), \
-            self.get_tfidf(doc2[0], doc2[1]), category)
-
-    def cos_sim(self, tfidf1, tfidf2, category = None):
+    def cos_sim(self, tfidf1, tfidf2):
         '''
         A helper function to compute the cos simliarity between
         news story and centroid.
@@ -137,47 +70,15 @@ class AINewsCorpus:
                 word = self.wordids[key]
                 a = tfidf1[key]
                 b = tfidf2[key]
-                tdf = math.pow(self.get_icsd(word), self.icsd_pow) * \
-                        math.pow(self.get_sd(word), self.sd_pow)
-                if category != None and self.get_csd(category, word) != 0.0:
-                    tdf *= math.pow(self.get_csd(category, word), self.csd_pow)
-                sim += a*b*tdf
+                sim += a*b
         return sim
 
     def add_freq_index(self, urlid, wordfreq, categories = []):
-        for cat in categories:
-            if cat in self.categories:
-                self.tfijk[cat][urlid] = {}
         for word in wordfreq:
             self.wordlist.setdefault(word, 0)
             self.wordlist[word] += 1
 
-            for cat in categories:
-                if cat in self.categories:
-                    self.tfijk[cat][urlid].setdefault(word, 0)
-                    self.tfijk[cat][urlid][word] += wordfreq[word]
-
-            for cat in self.categories:
-                self.tfik[cat].setdefault(word, 0)
-            for cat in categories:
-                if cat in self.categories:
-                    self.tfik[cat][word] += wordfreq[word]
-
     def commit_freq_index(self, table):
-        # calculate tfik
-        for cat in self.categories:
-            for word in self.tfik[cat]:
-                if len(self.cat_urlids[cat]) > 0:
-                    self.tfik[cat][word] /= float(len(self.cat_urlids[cat]))
-
-        self.cat_totals = 0.0
-        for cat in self.categories:
-            self.cat_totals += float(len(self.cat_urlids[cat]))
-
-        self.icsd = {}
-        self.csd = {}
-        self.sd = {}
-
         self.dftext = {}
         self.wordids = {}
         for word in self.wordlist:
@@ -187,35 +88,53 @@ class AINewsCorpus:
             self.dftext[word] = (rowid, self.wordlist[word])
         self.wordlist = {}
 
-    def get_article(self, urlid):
-        # try fetching article from urllist table plus text pickle file
-        row = self.db.selectone("""select c.title, c.topic, c.pubdate
-            from urllist as c where c.rowid = %s and c.topic != 'NotRelated'
-            order by c.rowid desc""" % urlid)
-        if row != None:
-            try:
-                content = loadpickle(paths['ainews.news_data'] + \
-                        "text/"+str(urlid)+".pkl")
-            except: return None
-            wordfreq = self.txtpro.simpletextprocess(urlid, content)
-            return {'urlid': urlid, 'content': content,
-                    'title': row[0], 'wordfreq': wordfreq, \
-                    'topics': [row[1]], 'pubdate': row[2]}
+    def get_article(self, urlid, corpus = False):
+        if corpus:
+            table = 'cat_corpus'
+            cat_table = 'cat_corpus_cats'
         else:
-            # try fetching article from cat_corpus
-            row = self.db.selectone("""select c.content, c.title,
-                group_concat(cc.category separator ' ')
-                from cat_corpus as c, cat_corpus_cats as cc
-                where c.urlid = %s and c.urlid = cc.urlid
-                and cc.category != 'NotRelated'
-                group by c.urlid order by c.urlid desc""" % urlid)
-            if row != None:
-                wordfreq = self.txtpro.simpletextprocess(urlid, row[0])
-                return {'urlid': urlid, 'content': row[0],
-                        'title': row[1], 'wordfreq': wordfreq, \
-                        'topics': row[2].split(' '), 'pubdate': None}
-            else:
-                return None
+            table = 'urllist'
+            cat_table = 'categories'
+
+        row = self.db.selectone("""select u.url, u.title, u.content, u.pubdate,
+            u.crawldate, u.processed, u.publisher from %s as u where u.urlid = %s""" % \
+            (table, urlid))
+        if row != None:
+            wordfreq = self.txtpro.simpletextprocess(urlid, row[2])
+            processed = False
+            if row[5] == 1: processed = True
+            categories = []
+            cat_rows = self.db.selectall("""select category from %s
+                where urlid = %s""" % (cat_table, urlid))
+            for cat_row in cat_rows:
+                categories.append(cat_row[0])
+            return {'urlid': urlid, 'url': row[0], 'title': row[1],
+                    'content': row[2], 'pubdate': row[3], 'crawldate': row[4],
+                    'processed': processed, 'publisher': row[6],
+                    'categories': categories,
+                    'wordfreq': wordfreq, 'tfidf': self.get_tfidf(urlid, wordfreq)}
+        else:
+            return None
+
+    def get_articles_daterange(self, date_start, date_end):
+        articles = {}
+        rows = self.db.selectall("""select urlid from urllist
+            where pubdate >= '%s' and pubdate <= '%s'""" % (date_start, date_end))
+        for row in rows:
+            articles[row[0]] = self.get_article(row[0])
+        return articles
+
+    def get_unprocessed(self):
+        articles = {}
+        rows = self.db.selectall("select urlid from urllist where processed = 0")
+        for row in rows:
+            articles[row[0]] = self.get_article(row[0])
+        return articles
+
+    def mark_processed(self, articles):
+        for urlid in articles:
+            self.db.execute("update urllist set processed = 1 where urlid = %s",
+                    urlid)
 
     def restore_corpus(self):
         self.wordids = {}
@@ -255,19 +174,6 @@ class AINewsCorpus:
         self.db.execute("alter table wordlist_eval auto_increment = 0")
         self.wordids = {}
         self.cache_urls = {}
-        self.tfijk = {}
-        self.tfik = {}
-        for cat in self.categories:
-            self.tfik[cat] = {}
-            self.tfijk[cat] = {}
-        self.cat_urlids = {}
-        for cat in self.categories:
-            self.cat_urlids[cat] = []
-        for c in train_corpus:
-            for cat in c[2].split(' '):
-                if cat in self.categories:
-                    self.cat_urlids[cat].append(c[0])
-
         for c in train_corpus:
             self.add_freq_index(c[0], c[1], c[2].split())
         self.commit_freq_index('wordlist_eval')

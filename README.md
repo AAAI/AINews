@@ -1,5 +1,7 @@
 # AINews
 
+The main script, `AINews.py`, accepts 
+
 The main script, `AINews.py`, performs the training/crawling/publishing
 process. The script can be called with the `all` option to perform all steps:
 

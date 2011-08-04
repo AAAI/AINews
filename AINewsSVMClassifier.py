@@ -12,23 +12,18 @@ class AINewsSVMClassifier:
     def __init__(self):
         self.corpus = AINewsCorpus()
 
-    def predict(self, urlids):
-        self.corpus.restore_corpus()
+    def predict(self, articles):
+        urlids = sorted(articles.keys())
 
         # produce the test input file
         f = open(paths['svm.svm_data']+'predict', 'w')
         for urlid in urlids:
-            wordfreq = self.corpus.get_article(urlid)['wordfreq']
-            tfidf = self.corpus.get_tfidf(urlid, wordfreq)
+            tfidf = self.corpus.get_tfidf(urlid, articles[urlid]['wordfreq'])
             f.write("+1 ")
             for wordid in sorted(tfidf.keys()):
                 f.write("%s:%f " % (wordid, tfidf[wordid]))
             f.write("\n")
         f.close()
-
-        predictions = {}
-        for urlid in urlids:
-            predictions[urlid] = []
 
         for cat in self.corpus.categories:
             cmd = 'svm-scale -r "%s" "%s" > "%s"' % \
@@ -46,11 +41,10 @@ class AINewsSVMClassifier:
             f.close()
             for i in range(len(lines)):
                 if lines[i] == "1\n":
-                    predictions[urlids[i]].append(cat)
+                    articles[urlids[i]]['categories'].append(cat)
 
-        for urlid in urlids:
-            title = self.corpus.get_article(urlid)['title']
-            print "%s %s:\n\t%s\n" % (urlid, title, predictions[urlid])
+        for urlid in articles:
+            articles[urlid]['categories'] = sorted(articles[urlid]['categories'])
 
     def evaluate(self, ident):
         results = {}

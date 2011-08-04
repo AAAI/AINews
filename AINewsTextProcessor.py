@@ -11,7 +11,7 @@ import re
 import nltk
 import types
 from nltk.corpus import wordnet as wn
-from AINewsConfig import config, stopwords, cat_whitelist
+from AINewsConfig import config, stopwords, whitelist
 
 class AINewsTextProcessor:
     """
@@ -23,9 +23,13 @@ class AINewsTextProcessor:
         """
         Initialize AINewsTextProcessor class
         """
-        self.debug = config['ainews.debug']
         self.cache = {}
         self.stemmer = nltk.stem.PorterStemmer()
+        self.whitelist_stemmed = []
+        for w in whitelist:
+            ws = w.split(' ')
+            ws = map(lambda w: self.stem(w), ws)
+            self.whitelist_stemmed.append(' '.join(ws))
 
     def stem(self, word):
         if word[0].islower():
@@ -93,8 +97,8 @@ class AINewsTextProcessor:
 
         words = []
         for w in words_all:
-            if w.lower() in cat_whitelist:
-                words.append(w.lower())
+            if w in self.whitelist_stemmed:
+                words.append(w)
         self.cache[urlid] = nltk.FreqDist(words)
         return self.cache[urlid]
         

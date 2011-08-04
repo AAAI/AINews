@@ -53,15 +53,9 @@ def usage():
         (2) train:
             train news classifiers based on human rates.
             
-        (3) rank:
-            rank the latest news and generate output files.
-            
-        (4) publish:
+        (3) publish:
             publish news from output files to Pmwiki site and send emails.
             It is weekly publish to the public.
-            
-        (5) all:
-            Automatically processing train, crawl, rank, and publish tasks.
             
         View Latest news at:
         http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/AINews
@@ -79,7 +73,7 @@ def crawl(opts):
     rss_flag = True
     crawler = AINewsCrawler()
     for opt, val in opts:
-        if opt in ("-r", "--rss") :
+        if opt in ("-r", "--rss"):
             rss_flag = True
         elif opt in ("-f", "--file"):
             rss_flag = False
@@ -99,29 +93,25 @@ def train():
     svm.load_news_words()
     svm.train_all()
     svm.train_isrelated()
-    
-def rank():
-    ranker = AINewsRanker()
-    rankedscores = ranker.rank()
-    #ranker.order_rankednews_by_topic(rankedscores)
-    
+
 def publish():
     publisher = AINewsPublisher()
+    publisher.filter_and_process()
     publisher.generate_standard_output()
     publisher.generate_email_output()
     publisher.generate_pmwiki_output()
-    publisher.publish_email()
+    #publisher.publish_email()
     publisher.publish_pmwiki()
     publisher.update_rss()
-    
+
 def main():
     """
     Main function of AINews.py
     """
     # Set en_US, UTF8
     locale.setlocale(locale.LC_ALL,'en_US.UTF-8')
-    
-    commands_list = ("train", "crawl", "rank", "publish", "all", "help")
+
+    commands_list = ("train", "crawl", "publish", "help")
     try:
         if len(sys.argv) < 2 or sys.argv[1] not in commands_list:
             usage()
@@ -134,24 +124,14 @@ def main():
         usage()
         sys.exit(2)
 
-    elif command == "train":
-        train()     
-        
-    if command == "crawl":    
+    if command == "train":
+        train()
+
+    elif command == "crawl":
         crawl(opts)
 
-    elif command == "rank":
-        rank()
-        
     elif command == "publish":
         publish()
-        
-    elif command == "all":
-        train()
-        crawl(opts)
-        rank()
-        publish()
-    
 
 if __name__ == "__main__":
     main()

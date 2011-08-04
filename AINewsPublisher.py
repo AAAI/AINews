@@ -1,22 +1,20 @@
-"""
-AINewsPublisher generates the ranked latest news into different output format.
-It publish to the PmWiki website and send email to subscriber. Facebook page
-can be added in the future task.
-
-The pmwiki page utilizes the AINewsPmwiki.php file to transfer the output file
-into PmWiki format.
-"""
 import feedparser
 import PyRSS2Gen
 import sys
+import operator
 from os import path, mkdir
 from glob import glob
 from random import shuffle
 from subprocess import *
 from datetime import date, datetime, timedelta
-from operator import itemgetter
-from AINewsTools import loadpickle, savefile,savepickle
+from AINewsTools import savefile
 from AINewsConfig import config, paths, aitopic_urls
+from AINewsDB import AINewsDB
+from AINewsCorpus import AINewsCorpus
+from AINewsDuplicates import AINewsDuplicates
+from AINewsSVMClassifier import AINewsSVMClassifier
+from AINewsTextProcessor import AINewsTextProcessor
+from AINewsSummarizer import AINewsSummarizer
 
 sys.path.append(paths['templates.compiled'])
 from LatestNewsTxt import LatestNewsTxt
@@ -28,6 +26,16 @@ class AINewsPublisher():
     def __init__(self):
         self.debug = config['ainews.debug']
         self.today = date.today()
+        self.db = AINewsDB()
+        self.corpus = AINewsCorpus()
+        self.duplicates = AINewsDuplicates()
+        self.svm_classifier = AINewsSVMClassifier()
+        self.txtpro = AINewsTextProcessor()
+        self.summarizer = AINewsSummarizer()
+
+        self.articles = {}
+        self.published_articles = []
+
         self.topicids = {"AIOverview":0, "Agents":1, "Applications":2,
            "CognitiveScience":3, "Education":4,"Ethics":5, 
            "Games":6, "History":7, "Interfaces":8, "MachineLearning":9,
@@ -35,56 +43,108 @@ class AINewsPublisher():
            "Representation":13, "Robots":14, "ScienceFiction":15,"Speech":16,
            "Systems":17,  "Vision":18}
 
-        news_unfiltered = loadpickle(paths['ainews.output'] + "topnews.pkl")
-        # filter topnews_unfiltered, moving through each category one at a
-        # time, picking a top story in that category until STORIES_COUNT
-        # stories are obtained
-        stories_count = int(config['publisher.stories_count'])
-        topicids = self.topicids.keys()
-        self.topnews = []
-        for max_count in range(1, stories_count + 1):
-            if(len(self.topnews) == stories_count):
-                break
-            shuffle(topicids)
-            for topic in topicids:
-                if(len(self.topnews) == stories_count):
-                    break
-                topic_count = len(filter(lambda n: n['topic'] == topic, self.topnews))
-                if(topic_count == max_count):
-                    continue
-                topic_news = filter(lambda n: n['topic'] == topic, news_unfiltered)
-                if(len(topic_news) == 0):
-                    continue
-                self.topnews.append(topic_news[0])
-                news_unfiltered.remove(topic_news[0])
+    def filter_and_process(self):
+        self.articles = self.corpus.get_unprocessed()
 
-        # sort topnews disregarding topic (sort on score)
-        self.topnews = sorted(self.topnews, key=itemgetter('score'), reverse=True)
-        
-        currmonth = self.today.strftime("%Y-%m")
-        p = paths['ainews.output'] + "monthly/" + currmonth
-        if not path.exists(p):
-            mkdir(p)
-        savepickle(p+"/"+self.today.strftime("%d"), self.topnews)
-        
+        if len(self.articles) == 0: return
+
+        # assume every article will be published; may be set to False from one
+        # of the filtering processes below
+        for urlid in self.articles:
+            self.articles[urlid]['publish'] = True
+            self.articles[urlid]['transcript'] = []
+
+        # filter by whitelist
+        for urlid in self.articles:
+            white_wordfreq = self.txtpro.whiteprocess(urlid,
+                    self.articles[urlid]['content'])
+            if len(white_wordfreq) == 0:
+                self.articles[urlid]['publish'] = False
+            else:
+                self.articles[urlid]['white_wordfreq'] = white_wordfreq
+
+        # update categories based on SVM classifier predictions
+        self.svm_classifier.predict(self.articles)
+
+        # drop articles with no categories
+        for urlid in self.articles:
+            if len(self.articles[urlid]['categories']) == 0:
+                self.articles[urlid]['publish'] = False
+
+        #for urlid in articles:
+            # update article in database
+        #    self.update_db(articles[urlid])
+
+        # filter out duplicates; some articles may have 'publish' set to False
+        # by this function
+        self.duplicates.filter_duplicates(self.articles)
+
+        # add article summaries
+        self.summarizer.summarize(self.articles)
+
+        for urlid in self.articles:
+            # score each article
+            print urlid, self.articles[urlid]['publish'], self.articles[urlid]['title'], self.articles[urlid]['categories'], self.articles[urlid]['summary']
+            print
+
+        # mark each as processed
+        #self.corpus.mark_processed(self.articles)
+
+
+        # save sorted list of articles to be read by AINewsPublisher; sort by
+        # number of categories, more categories = earlier in list
+        unpublished_articles = sorted(
+                filter(lambda x: x['publish'], self.articles.values()),
+                cmp=lambda x,y: cmp(len(x), len(y)),
+                key=operator.itemgetter('categories'),
+                reverse = True)
+
+        max_cat_count = int(config['publisher.max_cat_count'])
+        max_count = int(config['publisher.max_count'])
+        cat_counts = {}
+        for cat in self.corpus.categories:
+            cat_counts[cat] = 0
+        # choose stories such that no category has more than max_cat_count
+        # members and no more than max_count stories have been selected
+        # (independent of category); only one of the article's categories needs
+        # to have "free space"
+        self.published_articles = []
+        for article in unpublished_articles:
+            if len(self.published_articles) == max_count:
+                break
+            free_cat = False
+            for cat in article['categories']:
+                if cat_counts[cat] < max_cat_count:
+                    free_cat = True
+                    break
+            if free_cat:
+                self.published_articles.append(article)
+                for cat in article['categories']:
+                    cat_counts[cat] += 1
+
         self.semiauto_email_output = ""
-        
+
+    def update_db(self, article):
+        self.db.execute("delete from categories where urlid = %s", article['urlid'])
+        for cat in article['categories']:
+            self.db.execute("insert into categories values (%s,%s)",
+                (article['urlid'], cat))
+
     def generate_standard_output(self): 
         """
         Generate the stanard output for debuging on screen.
         """
         txt = LatestNewsTxt()
-        txt.news = self.topnews
+        txt.news = self.published_articles
         savefile(paths['ainews.output'] + "std_output.txt", str(txt))
-        
-    
+
     def generate_email_output(self):
         """
         Generate the output for email format.
         """
         email = LatestNewsEmail()
         email.date = self.today.strftime("%B %d, %Y")
-        email.news = self.topnews
+        email.news = self.published_articles
         email.aitopic_urls = aitopic_urls
         email.topicids = self.topicids
         email_output = str(email)
@@ -100,21 +160,18 @@ class AINewsPublisher():
         pmwiki = LatestNewsPmWiki()
         pmwiki.date = self.today.strftime("%B %d, %Y")
         pmwiki.year = self.today.strftime("%Y")
-        pmwiki.news = self.topnews
-        pmwiki.rater = True
-        savefile(paths['ainews.output'] + "pmwiki_output.txt", str(pmwiki))
-        pmwiki.rater = False
+        pmwiki.news = self.published_articles
+        #pmwiki.rater = True
+        #savefile(paths['ainews.output'] + "pmwiki_output.txt", str(pmwiki))
+        #pmwiki.rater = False
         savefile(paths['ainews.output'] + "pmwiki_output_norater.txt", str(pmwiki))
 
         # Generate wiki metadata page for each article
-        urlids_output = ""
-        for news in self.topnews:
-            urlids_output += str(news['urlid']) + '\n'
-            article = ArticlePmWiki()
-            article.n = news
-            savefile(paths['ainews.output'] + "aiarticles/%d" % news['urlid'], str(article))
-
-        savefile(paths['ainews.output'] + "urlids_output.txt", urlids_output)
+        for urlid in self.articles:
+            article_wiki = ArticlePmWiki()
+            article_wiki.n = self.articles[urlid]
+            savefile(paths['ainews.output'] + "aiarticles/%d" % urlid,
+                    str(article_wiki))
 
     def publish_email(self):
         """
@@ -158,15 +215,14 @@ class AINewsPublisher():
     def update_rss(self):
         rssitems = []
         # insert latest news into rssitems
-        for news in self.topnews:
+        for article in self.published_articles:
             rssitems.append(PyRSS2Gen.RSSItem(
-                            title = news['title'],
-                            link = news['url'],
-                            description = news['desc'],
-                            guid = PyRSS2Gen.Guid(news['url']),
-                            pubDate = datetime(news['pubdate'].year, \
-                                news['pubdate'].month, news['pubdate'].day)
-                            ))
+                title = article['title'],
+                link = article['url'],
+                description = article['summary'],
+                guid = PyRSS2Gen.Guid(article['url']),
+                pubDate = datetime(article['pubdate'].year, \
+                    article['pubdate'].month, article['pubdate'].day)))
             
         rssfile = paths['ainews.rss'] + "news.xml"
         publish_rss(rssfile, rssitems)
@@ -176,17 +232,18 @@ class AINewsPublisher():
             'game', 'hist', 'interf', 'ml', 'nlp', 'phil', 'reason',
              'rep', 'robot', 'scifi', 'speech', 'systems',  'vision']
         topicitems = []
-        for i in range(len(topicrsses)): topicitems.append([])
-        for news in self.topnews:
-            topicid = self.topicids[news['topic']]
-            topicitems[topicid].append(PyRSS2Gen.RSSItem(
-                                title = news['title'],
-                                link = news['url'],
-                                description = news['desc'],
-                                guid = PyRSS2Gen.Guid(news['url']),
-                                pubDate = datetime(news['pubdate'].year, \
-                                    news['pubdate'].month, news['pubdate'].day)
-                                ))
+        for i in range(len(topicrsses)):
+            topicitems.append([])
+        for article in self.published_articles:
+            for cat in article['categories']:
+                topicid = self.topicids[cat]
+                topicitems[topicid].append(PyRSS2Gen.RSSItem(
+                        title = article['title'],
+                        link = article['url'],
+                        description = article['summary'],
+                        guid = PyRSS2Gen.Guid(article['url']),
+                        pubDate = datetime(article['pubdate'].year, \
+                            article['pubdate'].month, article['pubdate'].day)))
             
         for i in range(len(topicrsses)):
             rssfile = paths['ainews.rss'] + topicrsses[i]+'.xml'

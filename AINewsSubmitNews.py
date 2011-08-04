@@ -18,9 +18,7 @@ import getopt
 import locale
 from datetime import date, timedelta
 
-from AINewsConfig import config, paths, \
-     whitelist_bigrams, whitelist_unigrams, whitelist_trigrams, \
-     dateformat_regexps
+from AINewsConfig import config, paths, dateformat_regexps
 from AINewsTools import savefile, loadcsv, strip_html, savepickle, loadfile2
 from AINewsTextProcessor import AINewsTextProcessor
 from AINewsDB import AINewsDB
@@ -169,7 +167,7 @@ class AINewsSubmitNews:
               (url, textlen, tag, topic,str(pubdate), str(crawldate),\
                 re.escape(publisher), title, desc)
         try:
-            urlid = self.db.insert(sql)
+            urlid = self.db.execute(sql)
             return urlid
         except Exception, e :
             if self.debug:
