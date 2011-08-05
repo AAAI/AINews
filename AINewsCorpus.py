@@ -220,7 +220,7 @@ class AINewsCorpus:
         rows = self.db.selectall("""select c.urlid, c.content,
             group_concat(cc.category separator ' ')
             from %s as c, %s as cc
-            where c.urlid = cc.urlid and cc.category != 'NotRelated'
+            where c.urlid = cc.urlid
             group by c.urlid order by c.urlid desc""" % (name[0], name[1]))
         print "Processing %d articles..." % len(rows)
         docs = []

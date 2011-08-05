@@ -58,18 +58,30 @@ class AINewsPublisher():
         for urlid in self.articles:
             white_wordfreq = self.txtpro.whiteprocess(urlid,
                     self.articles[urlid]['content'])
+            self.articles[urlid]['white_wordfreq'] = white_wordfreq
             if len(white_wordfreq) == 0:
                 self.articles[urlid]['publish'] = False
-            else:
-                self.articles[urlid]['white_wordfreq'] = white_wordfreq
+                self.articles[urlid]['transcript'].append(
+                        'Rejected due to no whitelisted words')
 
         # update categories based on SVM classifier predictions
         self.svm_classifier.predict(self.articles)
 
+        # drop articles classified as 'NotRelated'
+        for urlid in self.articles:
+            if not self.articles[urlid]['publish']: continue
+            if 'NotRelated' in self.articles[urlid]['categories']:
+                self.articles[urlid]['publish'] = False
+                self.articles[urlid]['transcript'].append(
+                        'Rejected due to NotRelated classification')
+
         # drop articles with no categories
         for urlid in self.articles:
+            if not self.articles[urlid]['publish']: continue
             if len(self.articles[urlid]['categories']) == 0:
                 self.articles[urlid]['publish'] = False
+                self.articles[urlid]['transcript'].append(
+                        'Rejected due to no selected categories')
 
         #for urlid in articles:
             # update article in database

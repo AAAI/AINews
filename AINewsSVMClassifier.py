@@ -11,6 +11,8 @@ from AINewsTools import loadfile
 class AINewsSVMClassifier:
     def __init__(self):
         self.corpus = AINewsCorpus()
+        self.categories = self.corpus.categories
+        self.categories.append('NotRelated')
 
     def predict(self, articles):
         urlids = sorted(articles.keys())
@@ -18,6 +20,8 @@ class AINewsSVMClassifier:
         # produce the test input file
         f = open(paths['svm.svm_data']+'predict', 'w')
         for urlid in urlids:
+            for cat in self.categories:
+                articles[urlid]['cat_probs'] = {}
             tfidf = self.corpus.get_tfidf(urlid, articles[urlid]['wordfreq'])
             f.write("+1 ")
             for wordid in sorted(tfidf.keys()):
@@ -25,13 +29,14 @@ class AINewsSVMClassifier:
             f.write("\n")
         f.close()
 
-        for cat in self.corpus.categories:
+        # predict each category plus NotRelated
+        for cat in self.categories:
             cmd = 'svm-scale -r "%s" "%s" > "%s"' % \
                 (paths['svm.svm_data']+cat+'.range', \
                 paths['svm.svm_data']+'predict', \
                 paths['svm.svm_data']+'predict-'+cat+'.scaled')
             Popen(cmd, shell = True).wait()
-            cmd = 'svm-predict "%s" "%s" "%s" > /dev/null' % \
+            cmd = 'svm-predict -b 1 "%s" "%s" "%s" > /dev/null' % \
                 (paths['svm.svm_data']+'predict-'+cat+'.scaled', \
                 paths['svm.svm_data']+cat+'.model',
                 paths['svm.svm_data']+'predict-'+cat+'.output')
@@ -39,30 +44,45 @@ class AINewsSVMClassifier:
             f = open(paths['svm.svm_data']+'predict-'+cat+'.output', 'r')
             lines = f.readlines()
             f.close()
-            for i in range(len(lines)):
-                if lines[i] == "1\n":
-                    articles[urlids[i]]['categories'].append(cat)
+            labels = re.match('labels (-?1) (-?1)', lines[0]).group(1,2)
+            if labels[0] == '1': pos_label = 0
+            else: pos_label = 1
+            # first line of output file says "labels -1 1" or whatever
+            for i in range(1, len(lines)):
+                if not articles[urlids[i-1]]['publish']: continue
+                (prediction, prob1, prob2) = \
+                        re.match('(-?1) (\d\.\d+e?-?\d*) (\d\.\d+e?-?\d*)', lines[i]).group(1,2,3)
+                if pos_label == 0: prob_yes = prob1
+                else: prob_yes = prob2
+                articles[urlids[i-1]]['cat_probs'][cat] = prob_yes
+                if prediction == '1':
+                    articles[urlids[i-1]]['categories'].append(cat)
 
         for urlid in articles:
-            articles[urlid]['categories'] = sorted(articles[urlid]['categories'])
+            if not articles[urlid]['publish']:
+                articles[urlid]['categories'] = []
+            else:
+                articles[urlid]['categories'] = sorted(articles[urlid]['categories'])
 
     def evaluate(self, ident):
         results = {}
-        (train_corpus, predict_corpus) = self.corpus.load_corpus(ident, 1.0, True)
+        (train_corpus, predict_corpus) = self.corpus.load_corpus(ident, 0.9, True)
         self.generate_libsvm_input(train_corpus, 'train')
         self.generate_libsvm_input(predict_corpus, 'predict')
         print "Done generating SVM input."
         results = self.libsvm_train()
-        print results
+        #print results
 
     def generate_libsvm_input(self, corpus, suffix):
-        for cat in self.corpus.categories:
+        # erase files before appending
+        for cat in self.categories:
             model = open(paths['svm.svm_data']+cat+'-'+suffix, 'w')
             model.close()
         for c in corpus:
             cats = c[2].split(' ')
             tfidf = self.corpus.get_tfidf(c[0], c[1])
-            for cat in self.corpus.categories:
+            # build an input set for each category plus NotRelated
+            for cat in self.categories:
                 model = open(paths['svm.svm_data']+cat+'-'+suffix, 'a')
                 if cat in cats:
                     line = "+1 "
@@ -76,12 +96,13 @@ class AINewsSVMClassifier:
 
     def libsvm_train(self):
         results = {}
-        for cat in self.corpus.categories:
+        # train each category plus NotRelated
+        for cat in self.categories:
             sys.stdout.write("Training and testing " + cat + "... ")
             sys.stdout.flush()
             cmd = 'python svm-easy.py "%s" "%s"' % \
-                    (paths['svm.svm_data']+cat+'-train.txt',
-                    paths['svm.svm_data']+cat+'-predict.txt')
+                    (paths['svm.svm_data']+cat+'-train',
+                    paths['svm.svm_data']+cat+'-predict')
             (stdout, _) = Popen(cmd, shell = True, stdout=PIPE).communicate()
             m = re.match('.*Accuracy = (\d+).*', re.sub('\n', '', stdout))
             results[cat] = float(m.group(1))
@@ -93,10 +114,10 @@ if __name__ == "__main__":
     start = datetime.now()
 
     svm = AINewsSVMClassifier()
-    urlids = []
-    for i in range(0, 2000):
-        if svm.corpus.get_article(i) != None:
-            urlids.append(i)
+    #urlids = []
+    #for i in range(0, 2000):
+    #    if svm.corpus.get_article(i) != None:
+    #        urlids.append(i)
 
     if len(sys.argv) < 3:
         print("Wrong args.")
@@ -105,6 +126,6 @@ if __name__ == "__main__":
     if sys.argv[1] == "evaluate":
         svm.evaluate(sys.argv[2])
     elif sys.argv[1] == "predict":
-        svm.predict(urlids) #sys.argv[2].split(','))
+        svm.predict(sys.argv[2].split(',')) #svm.predict(urlids)
 
     print datetime.now() - start
