@@ -4,7 +4,7 @@ It parses the config.ini as well as pre-define several static parameters.
 """
 
 import sys
-from AINewsTools import loadconfig
+from AINewsTools import loadconfig, loadfile
 
 # Load those user configurable parameters
 config = loadconfig("config/config.ini")
@@ -15,12 +15,11 @@ db = loadconfig("config/db.ini")
 # Load paths
 paths = loadconfig("config/paths.ini")
 
-# The whitelist_unigrams, bigrams and trigrams are used to filter those
-# un-related news articles in the first place. Any news should at least
-# contain one of the those terms to be considered news candidates.
-whitelist_unigrams = frozenset(config['crawler.whitelist_unigrams'].split(":"))
-whitelist_bigrams  = frozenset(config['crawler.whitelist_bigrams'].split(":"))
-whitelist_trigrams = frozenset(config['crawler.whitelist_trigrams'].split(":"))
+whitelist = []
+for line in loadfile("config/whitelist.txt"):
+    w = line.strip()
+    if w != ' ':
+        whitelist.append(w)
 
 stopwords = set()
 try:

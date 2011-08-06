@@ -11,23 +11,6 @@ import pickle
 import locale
 import ConfigParser
 
-def nukedir(dir):
-    """
-    Delete all files and remove directory.
-    @param dir: target directory to be removed
-    @type dir:C{string}
-    """
-    if dir[-1] == os.sep: dir = dir[:-1]
-    files = os.listdir(dir)
-    for file in files:
-        if file == '.' or file == '..': continue
-        path = dir + os.sep + file
-        if os.path.isdir(path):
-            nukedir(path)
-        else:
-            os.unlink(path)
-        
-
 def savefile(filename, content):
     """
     Helper function to save content into file.
@@ -165,7 +148,7 @@ def savepmwiki(filename, page):
     Save Pmwiki page from wiki.d directory
     """
     content = ""
-    for key in page.keys():
+    for key in page:
         content += key + '=' + page[key]
     savefile(filename, content)
         

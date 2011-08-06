@@ -16,67 +16,11 @@ period      = 7
 ; this threshold for noisy removal.
 link_density_ratio = 0.4
 
-[textprocessor]
-; the type is either SIMPLE or NE to process text paragraphs into bag of words.
-; SIMPLE represents quick process, and NE represents parsing name entity, but it
-; runs much slower) 
-type            = SIMPLE
-
-[crawler]
-
-; whitelist_Ngrams is used to check the content of the news and make sure at least one keyword exist in the news content
-whitelist_unigrams  = aaai:ai:cognition:induction:turing:informatics:singularity:humanoid:avatar:darpa:bayes
-whitelist_bigrams   = artificial intelligence:smart machines:smart computer:intelligent machines:intelligent computers:intelligent software:intelligent agent:cognitive psychology:cognitive science:cognitive sciences:data mining:machine learning:expert system:semantic web:neural networks:image understanding:language understanding:language processing:understanding language:understanding speech:machine translation:computer vision:face recognition:recognizing faces:autonomous vehicle:autonomous vehicle:smart car:smart house:adaptive control:fallible human:sophisticated sensors:autonomous vehicles:share information:translation software:understand speech:speech recognition:image recognition:digital assistant:social impact:unmanned vehicle:onboard computer:cooperating agents:adaptive system:turing test:brain science:causal reasoning:automatic translation:automatic translator:machine translator:machine translation:translation software:translation system:expert system:poker program:poker bot:computer vision:machine vision:pattern recognition:pattern analysis:image recognition:image analysis:voice recognition:speec recognition:computer music:computer art:artificial life:neural network:semantic analysis:semantic search:recommendation system:recommendation engine:artificial thinking
-whitelist_trigrams  = nature of intelligence:semi autonomous systems:semi autonomous vehicles:real time information:carnegie mellon university:plan the route:machines take over:simulate human thinking
-
-
-[svm]
-; select word whose document freqency is among (lower_ratio*total doc, upper_ratio*total doc)
-docfreq_upper_ratio = 0.6
-docfreq_lower_ratio = 0.03
-
-; admin's average ratings are measured separated
-admins = Bgbuchanan:Rgsmith:Ldong
-
-[feedback]
-;deprecated. when admin vote, it's counted as more votes
-admin_votes        = 3 
-
-;the rater_count_cutoff and stdev_cutoff are deprecated
-; Dr.Buchanan wants only his and Dr.Reids' rating be used in retraining
-rater_count_cutoff  = 1
-stdev_cutoff        = 3.0
-
-[ranker]
-most_relevent_score = 5.0
-mild_relevent_score = 3.0
-no_relevent_score   = 0.0
-other_score         = 1.0
-source_order = NY Times:BBC:ScientificAmerican:IEEE Spectrum:ScienceDaily:CNN:MSNBC:Nature:Times:USAToday:Technology Review:Wall Street Journal:Wash Post:Guardian:Independent:LATimes:MITNews:NPR:Discovery:NewScientist:Popular Science:PCWorld:Forbes:CNet:ZDNet:Wired:Kurzweilai:Engadget:RobotNet:TheTimes:GoogleNews
-rank_cutoff      = 1000
+[duplicates]
+days_back = 14
+threshold = 0.13
 
 [publisher]
-stories_count       = 12
-
-[email]
-sender_account      = ainewsfinder@gmail.com
-password            = liangdong
-subscribers         = ldong@clemson.edu:buchanan@cs.pitt.edu:rgsmith@marathonoil.com:hamilton@aaai.org
-
-[sim]
-cutoff = 0.23
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;
-; Following parameters are deprecated
-;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-good_news_sources    = NY Times:BBC:Scientific American:CNN:Discovery:Popular Science:Technology Review:Wall Street Journal:Wash Post:MITNews:ScientificAmerican:NewScientist:MSNBC:Nature:Times:USAToday
-good_source_score    = 1.0      
-goodlist = aaai:ai:robot:robots:robotics:cognition:turing:informatics:singularity:humanoid:avatar:darpa:artificial intelligence:smart machines:smart computer:intelligent machines:intelligent computers:intelligent software:intelligent agent:cognitive psychology:cognitive science:data mining:machine learning:expert system:semantic web:neural networks:image understanding:language understanding:language processing:understanding language:understanding speech:machine translation:computer vision:face recognition:recognizing faces:autonomous vehicle:autonomous vehicle:smart car:smart house:adaptive control:fallible human:sophisticated sensors:autonomous vehicles:share information:translation software:understand speech:speech recognition:image recognition:digital assistant:social impact:unmanned vehicle:nature of intelligence:semi autonomous systems:semi autonomous vehicles:real time information:onboard computer:carnegie mellon university:plan the route:machines take over:simulate human thinking:cooperating agents:adaptive system:bayes:turing test
-badlist  = information theoretic:funding:licensing agreement:intelligence agency:artificial insemination:hollywood:movie:actor:actress:film:box office:ceo:manually controlled:operator controlled:tele operated:remotely operated:rov 
-svm_score_weight = 1.0
-term_score_weight = 3.0
-score_cutoff     = 3
-blacklist_hosts =www.clarin.com:www.ionline.pt:www.naturalproductsmarketplace.com:www.shockya.com:home.modernhealthcare.com
+max_cat_count    = 6
+max_count        = 12
 

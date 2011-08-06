@@ -165,9 +165,7 @@ class WSJParser(AINewsParser):
                 paragraphs = mysoup.findAll('p')
                 for paragraph in paragraphs:
                     text += paragraph.getText() + ' '
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
-            self.candidates[i][3] += ' ' + summary
             self.candidates[i].append(text)
           
 class ForbesParser(AINewsParser):
@@ -224,11 +222,8 @@ class ForbesParser(AINewsParser):
                 paragraphs = mysoup.findAll('p')
                 for paragraph in paragraphs:
                     text += paragraph.getText() + ' '
-            summary = self.summarizer.summarize(text, 5)
-            desc += ' ' + summary
             text = re.sub(r'&.*?;', ' ', text)
             if len(text) == 0:   continue
-            self.candidates[i].append(desc)    
             self.candidates[i].append(text)
             
 class BBCParser(AINewsParser):
@@ -322,12 +317,10 @@ class BBCParser(AINewsParser):
             dummy="Please turn on JavaScript. Media requires JavaScript to play."
             if text[:61]== dummy:
                 text = text[61:]
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
             if len(text) == 0:   continue
             
             self.candidates[i][0] = self.url
-            self.candidates[i].append(summary)
             self.candidates[i].append(text)
             
 class CNetParser(AINewsParser):
@@ -387,12 +380,10 @@ class CNetParser(AINewsParser):
             mysoups = mainsoup.findAll('p')
             for mysoup in mysoups:
                 text += mysoup.getText() + ' '
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
            
             if len(text) == 0:   continue
             self.candidates[i][0] = self.url
-            self.candidates[i][3] += ' ' + summary
             self.candidates[i].append(text)
             
 class TechnologyReviewParser(AINewsParser):
@@ -421,8 +412,7 @@ class TechnologyReviewParser(AINewsParser):
             url = res.find('a')['href']
             res = mysoup.find('dd',{'class':'SearchDek'})
             if res== None: continue
-            desc = res.getText()
-            self.candidates.append([url, title, d, desc])
+            self.candidates.append([url, title, d])
             
     def parse_storypage(self):
         for i, candidate in enumerate(self.candidates):
@@ -450,10 +440,8 @@ class TechnologyReviewParser(AINewsParser):
                     for mysoup in mysoups:
                         text += self.extract_genenraltext(mysoup) + ' '
             text = re.sub(r'\s+', ' ', text)
-            summary = self.summarizer.summarize(text, 4)
             
             text = re.sub(r'&.*?;', ' ', text)
-            self.candidates[i][3] += ' ' + summary
             self.candidates[i].append(text)
             
 class ScientificAmericanParser(AINewsParser):
@@ -501,10 +489,7 @@ class ScientificAmericanParser(AINewsParser):
             mysoups = mainsoup.findAll('p')
             for mysoup in mysoups:
                 text += mysoup.getText().strip() + ' '
-            summary = self.summarizer.summarize(text, 4)
-            summary = re.sub(r'\n', ' ', summary)
             text = re.sub(r'&.*?;', ' ', text)
-            self.candidates[i].append(summary)
             self.candidates[i].append(text)
             
 class DiscoveryParser(AINewsParser):
@@ -535,11 +520,7 @@ class DiscoveryParser(AINewsParser):
             if title[-7:] == '[VIDEO]': continue
             url = item.find('a')['href']
             
-            descitem = mysoup.find('p',{'class':'description'})
-            descitem.find('a').extract()
-            desc = descitem.getText()
-            
-            self.candidates.append([url, title, d, desc])
+            self.candidates.append([url, title, d])
             
     def parse_storypage(self):
         for i, candidate in enumerate(self.candidates):
@@ -560,9 +541,7 @@ class DiscoveryParser(AINewsParser):
             for mysoup in mysoups:
                 text += mysoup.getText() + ' '
             text = re.sub(r'\s+', ' ', text)
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
-            self.candidates[i][3] += ' ' + summary
             self.candidates[i].append(text)
             
 class GuardianParser(AINewsParser):
@@ -614,9 +593,7 @@ class GuardianParser(AINewsParser):
                 #text += mysoup.getText() + ' '
                 text += self.extract_genenraltext(mysoup)+' '
             text = re.sub(r'\s+', ' ', text)
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
-            self.candidates[i].append(summary)
             self.candidates[i].append(text)
 
 class TheTimesParser(AINewsParser):
@@ -722,9 +699,7 @@ class ScientificAmericanParser(AINewsParser):
             [span.extract() for span in spans]
             text = self.extract_genenraltext(mainsoup)
             text = re.sub(r'\s+', ' ', text)
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
-            self.candidates[i].append(summary)
             self.candidates[i].append(text)
  
 class NPRParser(AINewsParser):
@@ -793,9 +768,7 @@ class NPRParser(AINewsParser):
             
             text = self.extract_genenraltext(mainsoup)
             text = re.sub(r'\s+', ' ', text)
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
-            self.candidates[i].append(summary)
             self.candidates[i].append(text)
 
 class IndependentParser(AINewsParser):
@@ -855,9 +828,7 @@ class IndependentParser(AINewsParser):
             for mysoup in mysoups:
                 text += self.extract_genenraltext(mysoup) + ' '
             text = re.sub(r'\s+', ' ', text)
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
-            self.candidates[i].append(summary)
             self.candidates[i].append(text)
             
 class MSNBCParser(AINewsParser):
@@ -913,9 +884,7 @@ class MSNBCParser(AINewsParser):
             for mysoup in mysoups:
                 text += self.extract_genenraltext(mysoup) + ' '
             text = re.sub(r'\s+', ' ', text)
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
-            self.candidates[i].append(summary)
             self.candidates[i].append(text)
 
 class NatureParser(AINewsParser):
@@ -966,9 +935,7 @@ class NatureParser(AINewsParser):
                 text += self.extract_genenraltext(mysoup) + ' '
                 
             text = re.sub(r'\s+', ' ', text)
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
-            self.candidates[i].append(summary)
             self.candidates[i].append(text)
 
 
@@ -1034,9 +1001,7 @@ class TimesParser(AINewsParser):
             for mysoup in mysoups:
                 text += self.extract_genenraltext(mysoup) + ' '
             text = re.sub(r'\s+', ' ', text)
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
-            self.candidates[i].append(summary)
             self.candidates[i].append(text)
 
 class PCWorldParser(AINewsParser):
@@ -1108,9 +1073,7 @@ class PCWorldParser(AINewsParser):
                 text += self.extract_genenraltext(mysoup) + ' '
                 
             text = re.sub(r'\s+', ' ', text)
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
-            self.candidates[i].append(summary)
             self.candidates[i].append(text)
                     
 
@@ -1148,12 +1111,10 @@ class NYTRSSParser(AINewsParser):
             text = ""
             for mysoup in mysoups:
                 text += self.extract_genenraltext(mysoup) + ' '
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
             if len(text) == 0: continue
             m = re.search(r'\?', self.url)
             #self.candidates[i][0] = self.url[:m.start()]
-            self.candidates[i][3] += ' ' + summary
             self.candidates[i].append(text)
             
             
@@ -1219,9 +1180,7 @@ class PopularScienceRSSParser(AINewsParser):
                 mysoups = mainsoup.findAll('p')
                 for mysoup in mysoups:
                     text += self.extract_genenraltext(mysoup) + ' '
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
-            self.candidates[i].append(summary)
             self.candidates[i].append(text)
             
 class CNNRSSParser(AINewsParser):
@@ -1277,11 +1236,9 @@ class CNNRSSParser(AINewsParser):
             mysoups = mainsoup.findAll('p')
             for mysoup in mysoups:
                 text += mysoup.getText() + ' '
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
             m = re.search(r'\?', self.url)
             self.candidates[i][0] = self.url[:m.start()]
-            self.candidates[i].append(summary)
             self.candidates[i].append(text)
 
 class MITNewsRSSParser(AINewsParser):
@@ -1309,7 +1266,7 @@ class MITNewsRSSParser(AINewsParser):
                 m = re.search(r'<br />', entry.description)
                 desc = strip_html(entry.description[:m.start()])
             
-            self.candidates.append([entry.link, entry.title, d, desc, text])
+            self.candidates.append([entry.link, entry.title, d, text])
     def parse_storypage(self):
         pass
 
@@ -1355,10 +1312,8 @@ class WiredRSSParser(AINewsParser):
             mysoups = mainsoup.findAll('p')
             for mysoup in mysoups:
                 text +=  self.extract_genenraltext(mysoup) + ' '
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
             m = re.search(r'\?', self.url)
-            self.candidates[i].append(summary)
             self.candidates[i].append(text)
             
 
@@ -1403,10 +1358,8 @@ class WashPostRSSParser(AINewsParser):
             for mysoup in mysoups:
                 text +=  self.extract_genenraltext(mysoup) + ' '
             text = re.sub(r'__', '', text)
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', '', text)
             m = re.search(r'\?', self.url)
-            self.candidates[i].append(summary)
             self.candidates[i].append(text)
             self.candidates[i][0] = self.url
             
@@ -1446,10 +1399,8 @@ class NewScientistRSSParser(AINewsParser):
             mysoups = mainsoup.findAll('p',{"class":"infuse"})
             for mysoup in mysoups:
                 text += self.extract_genenraltext(mysoup) + ' '
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
             m = re.search(r'\?', self.url)
-            self.candidates[i].append(summary)
             self.candidates[i].append(text)
             
 class ZDNetRSSParser(AINewsParser):
@@ -1492,10 +1443,8 @@ class ZDNetRSSParser(AINewsParser):
             for mysoup in mysoups:
                 text += self.extract_genenraltext(mysoup) + ' '
             text = re.sub(r'\s+', ' ', text)
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
             m = re.search(r'\?', self.url)
-            self.candidates[i].append(summary)
             self.candidates[i].append(text)
     
     
@@ -1553,10 +1502,8 @@ class KurzweilaiRSSParser(AINewsParser):
                 text += self.extract_genenraltext(mysoup)+' '
             text = re.sub(r'\s+', ' ', text)
             if len(text) < 600: continue
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
             m = re.search(r'\?', self.url)
-            self.candidates[i].append(summary)
             self.candidates[i].append(text)
             
 class USATodayRSSParser(AINewsParser):
@@ -1611,10 +1558,8 @@ class USATodayRSSParser(AINewsParser):
                 text += self.extract_genenraltext(mysoup)+' '
             text = re.sub(r'\s+', ' ', text)
             if len(text)< 500: continue
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
             m = re.search(r'\?', self.url)
-            self.candidates[i].append(summary)
             self.candidates[i].append(text)
 
 class EngadgetRSSParser(AINewsParser):
@@ -1654,9 +1599,7 @@ class EngadgetRSSParser(AINewsParser):
 
             text = self.extract_genenraltext(mainsoup)
             text = re.sub(r'\s+', ' ', text)
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
-            self.candidates[i].append(summary)
             self.candidates[i].append(text)
            
            
@@ -1683,11 +1626,10 @@ class LATimesRSSParser(AINewsParser):
             self.remove_tag(descsoup, 'em')
             text = self.extract_genenraltext(descsoup)
             text = re.sub(r'\s+', ' ', text)
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
             url = entry.link
             title = entry.title
-            self.candidates.append([url, title, d, summary, text])
+            self.candidates.append([url, title, d, text])
             
     def parse_storypage(self):
         pass
@@ -1731,9 +1673,7 @@ class RobotNetRSSParser(AINewsParser):
 
             text = self.extract_genenraltext(mainsoup)
             text = re.sub(r'\s+', ' ', text)
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
-            self.candidates[i].append(summary)
             self.candidates[i].append(text)
     
 class GoogleNewsRSSParser(AINewsParser):
@@ -1758,26 +1698,9 @@ class GoogleNewsRSSParser(AINewsParser):
             res = self.parse_url(candidate[0])
             if not res or self.url == None or self.db.isindexed(self.url):
                 continue
-            try:
-                self.soup = BeautifulSoup(self.html)
-            except Exception, error:
-                print >> sys.stderr, "SOUP ERROR: %s" % error
-                continue
-            # Skip if the URL host is listed in blacklist
-            elems = self.url.split("/")
-            host = elems[2]
-            if host in blacklist_hosts: continue
-            
-            success = self.extract_content(extractdate = False)
-            if not success or len(self.text) == 0: continue
-            
-            summary = self.summarizer.summarize(self.text, 4)
-            text = re.sub(r'&.*?;', ' ', self.text)
-            if len(self.title)!=0:
-                self.candidates[i][1] = self.title
-            
-            self.candidates[i][0] = self.url
-            self.candidates[i].append(summary)
+            text = self.justext_extract(self.html)
+            if len(text) == 0: continue
+            text = re.sub(r'&.*?;', ' ', text)
             self.candidates[i].append(text)
 
 class ScienceDailyRSSParser(AINewsParser):
@@ -1820,9 +1743,7 @@ class ScienceDailyRSSParser(AINewsParser):
 
             text = self.extract_genenraltext(mainsoup)
             text = re.sub(r'\s+', ' ', text)
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
-            self.candidates[i].append(summary)
             self.candidates[i].append(text)
   
 class IEEESpectrumRSSParser(AINewsParser):
@@ -1874,8 +1795,6 @@ class IEEESpectrumRSSParser(AINewsParser):
 
             text = self.extract_genenraltext(mainsoup)
             text = re.sub(r'\s+', ' ', text)
-            summary = self.summarizer.summarize(text, 4)
             text = re.sub(r'&.*?;', ' ', text)
-            self.candidates[i].append(summary)
             self.candidates[i].append(text)
   

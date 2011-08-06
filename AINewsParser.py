@@ -20,20 +20,29 @@ from datetime import date, datetime, timedelta
 from BeautifulSoup import BeautifulSoup, Comment, BeautifulStoneSoup, \
                 NavigableString, Declaration, ProcessingInstruction
 from AINewsDB import AINewsDB
-from AINewsSummarizer import AINewsSummarizer
-from AINewsConfig import config, dateformat_regexps
+from AINewsConfig import config, paths, dateformat_regexps
+
+sys.path.append(paths['libraries.tools'])
+import justext
 
 class AINewsParser:
     def __init__(self):
         self.today = date.today()
         self.link_density = config['parser.link_density_ratio']
         self.debug = config['ainews.debug']
+        self.db = AINewsDB()
         period = int(config['ainews.period'])
         self.begindate = self.today - timedelta(days = period)
         self.clear()
-        self.db = AINewsDB()
-        self.summarizer = AINewsSummarizer()
         self.candidates = []
+
+    def justext_extract(self, html):
+        good_pars = []
+        pars = justext.justext(html, justext.get_stoplist('English'))
+        for par in pars:
+            if par['class'] == 'good':
+                good_pars.append(par['text'])
+        return "\n".join(good_pars)
         
     def clear(self):
         self.url = ""
@@ -281,7 +290,7 @@ class AINewsParser:
         @type text: C{string}
         """
         today = date.today()
-        for dateformat in dateformat_regexps.keys():
+        for dateformat in dateformat_regexps:
             regexp = dateformat_regexps[dateformat][0]
             res = re.search(regexp, text, re.IGNORECASE)
             if res == None:

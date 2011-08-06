@@ -18,9 +18,7 @@ import getopt
 import locale
 from datetime import date, timedelta
 
-from AINewsConfig import config, paths, \
-     whitelist_bigrams, whitelist_unigrams, whitelist_trigrams, \
-     dateformat_regexps
+from AINewsConfig import config, paths, dateformat_regexps
 from AINewsTools import savefile, loadcsv, strip_html, savepickle, loadfile2
 from AINewsTextProcessor import AINewsTextProcessor
 from AINewsDB import AINewsDB
@@ -141,7 +139,7 @@ class AINewsSubmitNews:
         @type text: C{string}
         """
         today = date.today()
-        for dateformat in dateformat_regexps.keys():
+        for dateformat in dateformat_regexps:
             regexp = dateformat_regexps[dateformat][0]
             res = re.search(regexp, text, re.IGNORECASE)
             if res == None:
@@ -169,7 +167,7 @@ class AINewsSubmitNews:
               (url, textlen, tag, topic,str(pubdate), str(crawldate),\
                 re.escape(publisher), title, desc)
         try:
-            urlid = self.db.insert(sql)
+            urlid = self.db.execute(sql)
             return urlid
         except Exception, e :
             if self.debug:
@@ -180,7 +178,7 @@ class AINewsSubmitNews:
         """
         Save the bag of words into database
         """
-        for word in words.keys():
+        for word in words:
             wordid = self.db.getentryid('wordlist', 'word', word)
             self.__update_docfreq(wordid, field)
             try:

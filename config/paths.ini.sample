@@ -21,9 +21,15 @@ rss = /path/to/rss/
 
 stoplist = /path/to/stoplist.txt
 
+[libraries]
+
+; (leave trailing slash)
+tools = /path/to/tools/
+
 [templates]
 
-compiled = /path/to/compiled
+; (leave trailing slash)
+compiled = /path/to/compiled/
 
 [pmwiki]
 
@@ -35,12 +41,21 @@ dir = /path/to/pmwiki/
 ; (leave trailing slash)
 svm_data = /path/to/svm/
 
+[corpus]
+
+; (leave trailing slash)
+corpus_other = /path/to/corpus/other/
+
+; pickle files
+duplist = /path/to/corpus/duplist.pkl
+notduplist = /path/to/corpus/notduplist.pkl
 
 [feedback]
 
 ; collect the user's feedback score into a file
 feedback_score = /path/to/resource/feedback.csv
-editor_score   = /path/to/resource/editor.csv
+editor_score = /path/to/resource/editor.csv
 
-
+; (leave trailing slash)
+submit_news_data = /path/to/submit_news_data/
 

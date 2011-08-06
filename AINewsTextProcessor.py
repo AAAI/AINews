@@ -11,7 +11,7 @@ import re
 import nltk
 import types
 from nltk.corpus import wordnet as wn
-from AINewsConfig import config, stopwords
+from AINewsConfig import config, stopwords, whitelist
 
 class AINewsTextProcessor:
     """
@@ -23,7 +23,19 @@ class AINewsTextProcessor:
         """
         Initialize AINewsTextProcessor class
         """
-        self.debug = config['ainews.debug']
+        self.cache = {}
+        self.stemmer = nltk.stem.PorterStemmer()
+        self.whitelist_stemmed = []
+        for w in whitelist:
+            ws = w.split(' ')
+            ws = map(lambda w: self.stem(w), ws)
+            self.whitelist_stemmed.append(' '.join(ws))
+
+    def stem(self, word):
+        if word[0].islower():
+            return self.stemmer.stem(word)
+        else:
+            return word
         
     def unigrams(self, raw):
         """
@@ -33,7 +45,8 @@ class AINewsTextProcessor:
         """
         if raw =="": return []
         splitter=re.compile('\\W*')
-        return [s.lower() for s in splitter.split(raw) if s != '']
+        return [s.lower() for s in splitter.split(raw) \
+                if s != '' and s.lower() not in stopwords]
          
     def bigrams(self, unigrams):
         """
@@ -51,7 +64,7 @@ class AINewsTextProcessor:
         """
         return nltk.trigrams(unigrams)
         
-    def simpletextprocess(self, raw):
+    def simpletextprocess(self, urlid, raw):
         """
         Key function in AINewsTextProcessor that it extracts the bag of words,
         then each word is morphed and passed the stopword list and count
@@ -59,11 +72,35 @@ class AINewsTextProcessor:
         @param raw: the raw text to be processed.
         @type raw: C{string}
         """
-        words = self.unigrams(raw)
-        words = [self.simple_pos_morphy(w) for w in words \
-                            if len(w)>2 and not w.isdigit()
-                             and w.lower() not in stopwords ]
-        return nltk.FreqDist(words)
+        if urlid in self.cache:
+            return self.cache[urlid]
+
+        unigrams = map(lambda w: self.stem(w), self.unigrams(raw))
+        self.cache[urlid] = nltk.FreqDist(unigrams)
+        return self.cache[urlid]
+
+    def whiteprocess(self, urlid, raw):
+        """
+        Keep only whitelisted unigrams, bigrams, and trigrams
+        """
+        if urlid in self.cache:
+            return self.cache[urlid]
+
+        unigrams = map(lambda w: self.stem(w), self.unigrams(raw))
+        words_all = unigrams
+        for (a,b) in self.bigrams(unigrams):
+            if ' ' in a or ' ' in b: continue
+            words_all.append(a + ' ' + b)
+        for (a,b,c) in self.trigrams(unigrams):
+            if ' ' in a or ' ' in b or ' ' in c: continue
+            words_all.append(a + ' ' + b + ' ' + c)
+
+        words = []
+        for w in words_all:
+            if w in self.whitelist_stemmed:
+                words.append(w)
+        self.cache[urlid] = nltk.FreqDist(words)
+        return self.cache[urlid]
         
     def textprocess(self, raw, onlyNOUN = True):
         """
@@ -85,7 +122,7 @@ class AINewsTextProcessor:
         self.tagged_sentences = [nltk.ne_chunk(sent, binary=True) \
                                     for sent in sentences]
         for tagged_sent in self.tagged_sentences:
-            if self.debug: print tagged_sent
+            if self.debug: pass #print tagged_sent
             for tagged_token in tagged_sent:
                 if type(tagged_token[0]) == types.TupleType :
                     name_entity = ""

@@ -1,0 +1,52 @@
+From: http://www-users.cs.umn.edu/~han/data/tmdata.tar.gz
+
+As mentioned in:
+
+@article{han2000centroid,
+  title={Centroid-based document classification: Analysis and experimental results},
+  author={Han, E.H. and Karypis, G.},
+  journal={Principles of Data Mining and Knowledge Discovery},
+  pages={116--123},
+  year={2000},
+  publisher={Springer}
+}
+
+http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.34.1097&rep=rep1&type=pdf
+
+
+1. This directory contains 20 data sets used in the experiments reported
+   in paper titled "Centroid-Based Document Classification: Analysis & 
+   Experimental Results" by Eui-Hong (Sam) Han and George Karypis.
+   Note that we did not include three data sets (west1, west2, and west3) 
+   from West Group, because they are not available for public use.
+
+2. For each data set, there are 3 files.  For example, for oh0 data set:
+
+	oh0.mat : sparse vector space representation of documents where rows
+                  are documents and columns are words
+	oh0.mat.rlabel: row label (the class name of each document)
+	oh0.mat.clabel: column label (stemmed words)
+
+3. Format of the *.mat file is as follows:
+
+   no-of-rows no-of-columns no-of-non-zero-elements
+   doc-1
+   doc-2
+   .
+   .
+   .
+   doc-n
+
+   Each row corresponds to a document and has the following format:
+
+   c1 f1 c2 f2 c3 f3 ..... cm fm
+
+   where c? represents a word id and f? represents the text frequency
+   of c? in this document.
+
+4. The *.mat.rlabel contains class label of documents.  The first line
+   corresponds to the class label of the first document represented in
+   *.mat file, and so forth.
+
+5. The *.mat.clabel contains stemmed words of the documents.  The first
+   line corresponds to the word-id 1 used in *.mat file, and so forth.

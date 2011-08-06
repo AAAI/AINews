@@ -21,30 +21,6 @@ phrases) that indicate higher or lower interest. The sources of the articles
 will also be considered, since appearance of a story in a major news publication
 like the NY Times makes it more likely to be asked about.
 
-USAGE:
-        python AINews.py COMMAND [OPTION]
-    COMMAND:
-        (1) crawl:
-            crawl latest news from outside web.
-            -r, --rss       (default) using RSS feeds to crawl news
-            -f, --file      crawl target URLs stored in the file
-            -u, --url       crawl one target URL
-            
-        (2) train:
-            train SVM news classifiers based on human rates.
-            
-        (3) rank:
-            rank the latest news and generate output files.
-            
-        (4) publish:
-            publish news from output files to Pmwiki site and send emails.
-                    
-        (5) all:
-            Automatically processing crawl,train, rank and publish tasks.
-            
-        View Latest news at:
-        http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/AINews
-        
 """
 
 import sys
@@ -54,8 +30,6 @@ import locale
 
 from AINewsConfig import config, paths
 from AINewsCrawler import AINewsCrawler
-from AINewsSVM import AINewsSVM
-from AINewsRanker import AINewsRanker
 from AINewsPublisher import AINewsPublisher
 from AINewsSubmitNews import AINewsSubmitNews
 
@@ -72,19 +46,13 @@ def usage():
             -r, --rss       (default) using RSS feeds to crawl news
             -f, --file      crawl target URLs stored in the file
             -u, --url       crawl one target URL
-            
+
         (2) train:
             train news classifiers based on human rates.
             
-        (3) rank:
-            rank the latest news and generate output files.
-            
-        (4) publish:
+        (3) publish:
             publish news from output files to Pmwiki site and send emails.
             It is weekly publish to the public.
-            
-        (5) all:
-            Automatically processing crawl,train, rank and publish tasks.
             
         View Latest news at:
         http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/AINews
@@ -102,7 +70,7 @@ def crawl(opts):
     rss_flag = True
     crawler = AINewsCrawler()
     for opt, val in opts:
-        if opt in ("-r", "--rss") :
+        if opt in ("-r", "--rss"):
             rss_flag = True
         elif opt in ("-f", "--file"):
             rss_flag = False
@@ -115,36 +83,32 @@ def crawl(opts):
             assert False, "unhandled option"
     if rss_flag:
         crawler.crawl()
-        
+
 def train():
     svm = AINewsSVM()
     svm.collect_feedback()
     svm.load_news_words()
     svm.train_all()
     svm.train_isrelated()
-    
-def rank():
-    ranker = AINewsRanker()
-    rankedscores = ranker.rank()
-    #ranker.order_rankednews_by_topic(rankedscores)
-    
+
 def publish():
     publisher = AINewsPublisher()
+    publisher.filter_and_process()
     publisher.generate_standard_output()
     publisher.generate_email_output()
     publisher.generate_pmwiki_output()
     publisher.publish_email()
     publisher.publish_pmwiki()
     publisher.update_rss()
-    
+
 def main():
     """
     Main function of AINews.py
     """
     # Set en_US, UTF8
     locale.setlocale(locale.LC_ALL,'en_US.UTF-8')
-    
-    commands_list = ("crawl", "train", "rank", "publish", "all", "help")
+
+    commands_list = ("train", "crawl", "publish", "help")
     try:
         if len(sys.argv) < 2 or sys.argv[1] not in commands_list:
             usage()
@@ -157,24 +121,14 @@ def main():
         usage()
         sys.exit(2)
 
-    if command == "crawl":    
+    if command == "train":
+        train()
+
+    elif command == "crawl":
         crawl(opts)
-            
-    elif command == "train":
-        train()     
-        
-    elif command == "rank":
-        rank()
-        
+
     elif command == "publish":
         publish()
-        
-    elif command == "all":
-        crawl(opts)
-        train()
-        rank()
-        publish()
-    
 
 if __name__ == "__main__":
     main()
