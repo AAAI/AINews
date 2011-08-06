@@ -33,6 +33,11 @@ class AINewsPublisher():
         self.txtpro = AINewsTextProcessor()
         self.summarizer = AINewsSummarizer()
 
+        self.sources = {}
+        rows = self.db.selectall("select parser, relevance from sources")
+        for row in rows:
+            self.sources[row[0].split('::')[0]] = int(row[1])
+
         self.articles = {}
         self.published_articles = []
 
@@ -83,13 +88,13 @@ class AINewsPublisher():
                 self.articles[urlid]['transcript'].append(
                         'Rejected due to no selected categories')
 
-        #for urlid in articles:
+        for urlid in articles:
             # update article in database
-        #    self.update_db(articles[urlid])
+            self.update_db(articles[urlid])
 
         # filter out duplicates; some articles may have 'publish' set to False
         # by this function
-        self.duplicates.filter_duplicates(self.articles)
+        self.duplicates.filter_duplicates(self.articles, self.sources)
 
         # add article summaries
         self.summarizer.summarize(self.articles)
@@ -100,15 +105,15 @@ class AINewsPublisher():
             print
 
         # mark each as processed
-        #self.corpus.mark_processed(self.articles)
+        self.corpus.mark_processed(self.articles)
 
 
         # save sorted list of articles to be read by AINewsPublisher; sort by
-        # number of categories, more categories = earlier in list
+        # relevance of source, then by number of categories, more categories
+        # means earlier in list
         unpublished_articles = sorted(
                 filter(lambda x: x['publish'], self.articles.values()),
-                cmp=lambda x,y: cmp(len(x), len(y)),
-                key=operator.itemgetter('categories'),
+                cmp=lambda x,y: self.compare_articles(x, y),
                 reverse = True)
 
         max_cat_count = int(config['publisher.max_cat_count'])
@@ -135,6 +140,16 @@ class AINewsPublisher():
                     cat_counts[cat] += 1
 
         self.semiauto_email_output = ""
+
+    def compare_articles(self, article1, article2):
+        relevance1 = self.sources[article1['publisher']]
+        relevance2 = self.sources[article2['publisher']]
+        cat_count1 = len(article1['categories'])
+        cat_count2 = len(article2['categories'])
+        if cmp(relevance1, relevance2) == 0:
+            return cmp(cat_count1, cat_count2)
+        else:
+            return cmp(relevance1, relevance2)
 
     def update_db(self, article):
         self.db.execute("delete from categories where urlid = %s", article['urlid'])
@@ -173,9 +188,9 @@ class AINewsPublisher():
         pmwiki.date = self.today.strftime("%B %d, %Y")
         pmwiki.year = self.today.strftime("%Y")
         pmwiki.news = self.published_articles
-        #pmwiki.rater = True
-        #savefile(paths['ainews.output'] + "pmwiki_output.txt", str(pmwiki))
-        #pmwiki.rater = False
+        pmwiki.rater = True
+        savefile(paths['ainews.output'] + "pmwiki_output.txt", str(pmwiki))
+        pmwiki.rater = False
         savefile(paths['ainews.output'] + "pmwiki_output_norater.txt", str(pmwiki))
 
         # Generate wiki metadata page for each article

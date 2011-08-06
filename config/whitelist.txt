@@ -1,4 +1,8 @@
 AAAI
+DARPA
+Turing
+Turing test
+abductive inference
 adaptive control
 adaptive system
 ai
@@ -6,22 +10,19 @@ artificial intelligence
 artificial life
 artificial thinking
 automatic translation
-automatic translator
 autonomous vehicle
-autonomous vehicles
 avatar
-bayes
+Bayes
+Bayesian
 brain science
 causal reasoning
 cognition
 cognitive psychology
 cognitive science
-cognitive sciences
 computer art
 computer music
 computer vision
 cooperating agents
-DARPA
 data mining
 digital assistant
 expert system
@@ -57,6 +58,7 @@ real time information
 recognizing faces
 recommendation engine
 recommendation system
+robot
 semantic analysis
 semantic search
 semantic web
@@ -75,8 +77,6 @@ speec recognition
 speech recognition
 translation software
 translation system
-turing
-turing test
 understand speech
 understanding language
 understanding speech

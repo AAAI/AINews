@@ -58,7 +58,7 @@ class AINewsCrawler:
                 parser.parse_storypage()
                 for candidate in parser.candidates:
                     if len(candidate) != 4: continue
-                    url = re.escape(candidate[0].encode('utf-8'))
+                    url = candidate[0].encode('utf-8')
                     title = (re.sub(r'\s+', ' ', candidate[1])).strip()
                     pubdate = candidate[2]
                     content = (re.sub(r'\s+', ' ', candidate[3])).strip()

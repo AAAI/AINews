@@ -30,9 +30,6 @@ import locale
 
 from AINewsConfig import config, paths
 from AINewsCrawler import AINewsCrawler
-from AINewsSVM import AINewsSVM
-from AINewsCentroidClassifier import AINewsCentroidClassifier
-from AINewsRanker import AINewsRanker
 from AINewsPublisher import AINewsPublisher
 from AINewsSubmitNews import AINewsSubmitNews
 
@@ -100,7 +97,7 @@ def publish():
     publisher.generate_standard_output()
     publisher.generate_email_output()
     publisher.generate_pmwiki_output()
-    #publisher.publish_email()
+    publisher.publish_email()
     publisher.publish_pmwiki()
     publisher.update_rss()
 
