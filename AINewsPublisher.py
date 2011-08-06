@@ -88,9 +88,9 @@ class AINewsPublisher():
                 self.articles[urlid]['transcript'].append(
                         'Rejected due to no selected categories')
 
-        for urlid in articles:
+        for urlid in self.articles:
             # update article in database
-            self.update_db(articles[urlid])
+            self.update_db(self.articles[urlid])
 
         # filter out duplicates; some articles may have 'publish' set to False
         # by this function
@@ -100,9 +100,11 @@ class AINewsPublisher():
         self.summarizer.summarize(self.articles)
 
         for urlid in self.articles:
-            # score each article
-            print urlid, self.articles[urlid]['publish'], self.articles[urlid]['title'], self.articles[urlid]['categories'], self.articles[urlid]['summary']
-            print
+            try:
+                print urlid, self.articles[urlid]['publish'], self.articles[urlid]['title'], self.articles[urlid]['categories'], self.articles[urlid]['summary']
+                print
+            except:
+                pass
 
         # mark each as processed
         self.corpus.mark_processed(self.articles)

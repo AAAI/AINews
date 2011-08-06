@@ -34,25 +34,25 @@ else:
 # aitopic_urls is used to assign each news to a category by comparing the
 # similarity with the following webpages.
 aitopic_urls = [
-    "http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/AIOverview",
-    "http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/Agents",
-    "http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/Applications",
-    "http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/CognitiveScience",
-    "http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/Education",
-    "http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/Ethics",
-    "http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/Games",
-    "http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/History",
-    "http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/Interfaces",
-    "http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/MachineLearning",
-    "http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/NaturalLanguage",
-    "http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/Philosophy",
-    "http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/Reasoning",
-    "http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/Representation",
-    "http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/Robots",
-    "http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/ScienceFiction",
-    "http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/Speech",
-    "http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/Systems",
-    "http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/Vision"
+    "http://aaai.org/AITopics/AIOverview",
+    "http://aaai.org/AITopics/Agents",
+    "http://aaai.org/AITopics/Applications",
+    "http://aaai.org/AITopics/CognitiveScience",
+    "http://aaai.org/AITopics/Education",
+    "http://aaai.org/AITopics/Ethics",
+    "http://aaai.org/AITopics/Games",
+    "http://aaai.org/AITopics/History",
+    "http://aaai.org/AITopics/Interfaces",
+    "http://aaai.org/AITopics/MachineLearning",
+    "http://aaai.org/AITopics/NaturalLanguage",
+    "http://aaai.org/AITopics/Philosophy",
+    "http://aaai.org/AITopics/Reasoning",
+    "http://aaai.org/AITopics/Representation",
+    "http://aaai.org/AITopics/Robots",
+    "http://aaai.org/AITopics/ScienceFiction",
+    "http://aaai.org/AITopics/Speech",
+    "http://aaai.org/AITopics/Systems",
+    "http://aaai.org/AITopics/Vision"
    ]
 
 """
