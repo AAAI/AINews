@@ -22,7 +22,6 @@ from AINewsConfig import config, paths, dateformat_regexps
 from AINewsTools import savefile, loadcsv, strip_html, savepickle, loadfile2
 from AINewsTextProcessor import AINewsTextProcessor
 from AINewsDB import AINewsDB
-from AINewsCentroidClassifier import AINewsCentroidClassifier
 from BeautifulSoup import BeautifulSoup, Comment, BeautifulStoneSoup, \
         NavigableString, Declaration, ProcessingInstruction
 from AINewsParser import AINewsParser
