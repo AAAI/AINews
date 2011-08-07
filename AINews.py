@@ -43,9 +43,6 @@ def usage():
     COMMAND:
         (1) crawl:
             crawl latest news from outside web.
-            -r, --rss       (default) using RSS feeds to crawl news
-            -f, --file      crawl target URLs stored in the file
-            -u, --url       crawl one target URL
 
         (2) train:
             train news classifiers based on human rates.
@@ -55,7 +52,7 @@ def usage():
             It is weekly publish to the public.
             
         View Latest news at:
-        http://www.aaai.org/AITopics/pmwiki/pmwiki.php/AITopics/AINews
+        http://www.aaai.org/AITopics/AINews
             
         """
 
