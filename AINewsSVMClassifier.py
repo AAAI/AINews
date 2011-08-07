@@ -16,6 +16,8 @@ class AINewsSVMClassifier:
 
     def predict(self, articles):
         urlids = sorted(articles.keys())
+        for urlid in articles:
+            articles[urlid]['categories'] = []
 
         # produce the test input file
         f = open(paths['svm.svm_data']+'predict', 'w')
@@ -58,10 +60,7 @@ class AINewsSVMClassifier:
                 if prediction == '1':
                     articles[urlids[i-1]]['categories'].append(cat)
 
-        for urlid in articles:
-            if not articles[urlid]['publish']:
-                articles[urlid]['categories'] = []
-            else:
+            for urlid in urlids:
                 articles[urlid]['categories'] = sorted(articles[urlid]['categories'])
 
     def evaluate(self, ident):

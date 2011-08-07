@@ -72,7 +72,11 @@ class AINewsCrawler:
                     urlid = self.put_in_db(url, pubdate, self.today, publisher, \
                             tag, title, content)
                     if urlid == None: continue
-                    print "{ID:%d} %s (%s)" % (urlid, title, str(pubdate))
+                    try:
+                        print "{ID:%d} %s (%s)" % (urlid, title, str(pubdate))
+                    except:
+                        pass
+
             except (KeyboardInterrupt):
                 if self.debug: print "Quitting early due to keyboard interrupt."
                 sys.exit()
