@@ -241,6 +241,29 @@ if (preg_match("/$curr/", $page['text']) == 0) {
 	WritePage($archivepage, $page);
 }
 
+
+# Write All News
+$filename = $OUTPUT_DIR."pmwiki_all.txt";
+$handle = fopen($filename, "r");
+$output = fread($handle, filesize($filename));
+fclose($handle);
+
+$today = date("Y-m-d");
+$pagename_result = "AINewsFinder.$today-AllNews";
+$page = ReadPage($pagename_result, READPAGE_CURRENT);
+$page['text'] = $output;
+WritePage($pagename_result, $page);
+
+# Add all news to AINewsFinder.NewsArchive page
+$curr = date("Y-m-d G:i:s");
+$archivepage = "AINewsFinder.AllNews";
+$page = ReadPage($archivepage, READPAGE_CURRENT);
+if (preg_match("/$curr/", $page['text']) == 0) {
+	$page['text'] =  "[[".$pagename_result."|$curr AllNews]][[<<]]\n".$page['text'];
+	WritePage($archivepage, $page);
+}
+
+
 # Add today news to AITopics.NewsArchive page
 $curr = date("M d");
 $year = date("Y");
@@ -255,11 +278,13 @@ if ($i == 0) {
     $page['text'] =  $pretext."'''$year'''\n*[[".$pagename_result."|$curr]][[<<]]\n".$protext;
     WritePage($archivepage, $page);
 }else{
-    $pos = strpos($page['text'], "'''$year'''");
-    $pretext = substr($page['text'], 0, $pos+11);
-    $protext = substr($page['text'], $pos+11);
-    $page['text'] =  $pretext."*[[".$pagename_result."|$curr]][[<<]]\n".$protext;
-	WritePage($archivepage, $page);
+    if(preg_match("/$curr/", $page['text'] == 0) {
+        $pos = strpos($page['text'], "'''$year'''");
+        $pretext = substr($page['text'], 0, $pos+11);
+        $protext = substr($page['text'], $pos+11);
+        $page['text'] =  $pretext."*[[".$pagename_result."|$curr]][[<<]]\n".$protext;
+        WritePage($archivepage, $page);
+    }
 }
 
 

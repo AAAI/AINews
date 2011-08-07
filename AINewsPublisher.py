@@ -21,6 +21,7 @@ from LatestNewsTxt import LatestNewsTxt
 from LatestNewsEmail import LatestNewsEmail
 from LatestNewsPmWiki import LatestNewsPmWiki
 from ArticlePmWiki import ArticlePmWiki
+from AllNewsPmWiki import AllNewsPmWiki
 
 class AINewsPublisher():
     def __init__(self):
@@ -195,12 +196,22 @@ class AINewsPublisher():
         pmwiki.rater = False
         savefile(paths['ainews.output'] + "pmwiki_output_norater.txt", str(pmwiki))
 
+        pmwiki_all = AllNewsPmWiki()
+        pmwiki_all.date = self.today.strftime("%B %d, %Y")
+        pmwiki_all.year = self.today.strftime("%Y")
+        pmwiki_all.news = self.articles.values()
+        savefile(paths['ainews.output'] + "pmwiki_all.txt", str(pmwiki_all))
+
         # Generate wiki metadata page for each article
+        urlids_output = ""
         for urlid in self.articles:
+            urlids_output += str(urlid) + '\n'
             article_wiki = ArticlePmWiki()
             article_wiki.n = self.articles[urlid]
             savefile(paths['ainews.output'] + "aiarticles/%d" % urlid,
                     str(article_wiki))
+        savefile(paths['ainews.output'] + "urlids_output.txt", urlids_output)
+
 
     def publish_email(self):
         """
