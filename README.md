@@ -54,6 +54,10 @@ configuration.
 
 ## Train
 
+<pre>
+python AINews.py train
+</pre>
+
 The trainer collects user ratings and finds the best support vector machines to
 categorize the articles and select which are relevant to AINews readers. Output
 is saved to the `svm_data` path (defined in `config/paths.ini`).
