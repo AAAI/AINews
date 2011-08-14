@@ -232,16 +232,6 @@ $page = ReadPage($pagename_result, READPAGE_CURRENT);
 $page['text'] = $output;
 WritePage($pagename_result, $page);
 
-# Add today news to AINewsFinder.NewsArchive page
-$curr = date("Y-m-d G:i:s");
-$archivepage = "AINewsFinder.NewsArchive";
-$page = ReadPage($archivepage, READPAGE_CURRENT);
-if (preg_match("/$curr/", $page['text']) == 0) {
-	$page['text'] =  "[[".$pagename_result."|$curr AI News]][[<<]]\n".$page['text'];
-	WritePage($archivepage, $page);
-}
-
-
 # Write All News
 $filename = $OUTPUT_DIR."pmwiki_all.txt";
 $handle = fopen($filename, "r");
