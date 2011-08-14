@@ -27,6 +27,7 @@ class AINewsPublisher():
     def __init__(self):
         self.debug = config['ainews.debug']
         self.today = date.today()
+        self.earliest_date = self.today - timedelta(days = int(config['ainews.period']))
         self.db = AINewsDB()
         self.corpus = AINewsCorpus()
         self.duplicates = AINewsDuplicates()
@@ -59,6 +60,13 @@ class AINewsPublisher():
         for urlid in self.articles:
             self.articles[urlid]['publish'] = True
             self.articles[urlid]['transcript'] = []
+
+        # filter by date
+        for urlid in self.articles:
+            if self.articles[urlid]['pubdate'] < self.earliest_date:
+                self.articles[urlid]['publish'] = False
+                self.articles[urlid]['transcript'].append(
+                        'Rejected because article is too old (earliest valid date is %s while article was published on %s' % (self.earliest_date.strftime('%F'), self.articles[urlid]['pubdate'].strftime('%F')))
 
         # filter by whitelist
         for urlid in self.articles:
