@@ -65,10 +65,10 @@ class AINewsSVMClassifier:
 
     def evaluate(self, ident):
         results = {}
-        #(train_corpus, predict_corpus) = self.corpus.load_corpus(ident, 0.9, True)
-        #self.generate_libsvm_input(train_corpus, 'train')
-        #self.generate_libsvm_input(predict_corpus, 'predict')
-        #print "Done generating SVM input."
+        (train_corpus, predict_corpus) = self.corpus.load_corpus(ident, 0.9, True)
+        self.generate_libsvm_input(train_corpus, 'train')
+        self.generate_libsvm_input(predict_corpus, 'predict')
+        print "Done generating SVM input."
         results = self.libsvm_train()
         print results
 
