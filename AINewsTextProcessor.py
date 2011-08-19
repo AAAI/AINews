@@ -37,7 +37,7 @@ class AINewsTextProcessor:
         else:
             return word
         
-    def unigrams(self, raw):
+    def unigrams(self, raw, removeStopwords = True):
         """
         Extract the bag of words from the raw text.
         @param raw: the raw text to be processed.
@@ -46,7 +46,8 @@ class AINewsTextProcessor:
         if raw =="": return []
         splitter=re.compile('\\W*')
         return [s.lower() for s in splitter.split(raw) \
-                if s != '' and s.lower() not in stopwords]
+                if s != '' and \
+                (removeStopwords == False or s.lower() not in stopwords)]
          
     def bigrams(self, unigrams):
         """
@@ -86,7 +87,7 @@ class AINewsTextProcessor:
         if urlid in self.cache:
             return self.cache[urlid]
 
-        unigrams = map(lambda w: self.stem(w), self.unigrams(raw))
+        unigrams = map(lambda w: self.stem(w), self.unigrams(raw, False))
         words_all = unigrams
         for (a,b) in self.bigrams(unigrams):
             if ' ' in a or ' ' in b: continue
