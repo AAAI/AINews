@@ -66,24 +66,28 @@ class AINewsPublisher():
             if self.articles[urlid]['pubdate'] < self.earliest_date:
                 self.articles[urlid]['publish'] = False
                 self.articles[urlid]['transcript'].append(
-                        'Rejected because article is too old (earliest valid date is %s while article was published on %s' % (self.earliest_date.strftime('%F'), self.articles[urlid]['pubdate'].strftime('%F')))
+                        ("Rejected because article is too old " +
+                        "(earliest valid date is %s while article was " +
+                        "published on %s") % (self.earliest_date.strftime('%F'),
+                            self.articles[urlid]['pubdate'].strftime('%F')))
 
         # filter by whitelist
         for urlid in self.articles:
             white_wordfreq = self.txtpro.whiteprocess(urlid,
                     self.articles[urlid]['content'])
             self.articles[urlid]['white_wordfreq'] = white_wordfreq
-            if len(white_wordfreq) == 0:
+
+            # require at least two different whitelisted terms
+            if len(white_wordfreq) < 2:
                 self.articles[urlid]['publish'] = False
                 self.articles[urlid]['transcript'].append(
-                        'Rejected due to no whitelisted words')
+                        'Rejected due to only one or no whitelisted terms')
 
         # update categories based on SVM classifier predictions
         self.svm_classifier.predict(self.articles)
 
         # drop articles classified as 'NotRelated'
         for urlid in self.articles:
-            if not self.articles[urlid]['publish']: continue
             if 'NotRelated' in self.articles[urlid]['categories']:
                 self.articles[urlid]['publish'] = False
                 self.articles[urlid]['transcript'].append(
@@ -91,7 +95,6 @@ class AINewsPublisher():
 
         # drop articles with no categories
         for urlid in self.articles:
-            if not self.articles[urlid]['publish']: continue
             if len(self.articles[urlid]['categories']) == 0:
                 self.articles[urlid]['publish'] = False
                 self.articles[urlid]['transcript'].append(
@@ -106,7 +109,7 @@ class AINewsPublisher():
         self.duplicates.filter_duplicates(self.articles, self.sources)
 
         # add article summaries
-        self.summarizer.summarize(self.articles)
+        self.summarizer.summarize(self.corpus, self.articles)
 
         for urlid in self.articles:
             try:
@@ -120,8 +123,8 @@ class AINewsPublisher():
 
 
         # save sorted list of articles to be read by AINewsPublisher; sort by
-        # relevance of source, then by number of categories, more categories
-        # means earlier in list
+        # duplicate count (more = better), then relevance of source,
+        # then by number of categories (more = better)
         unpublished_articles = sorted(
                 filter(lambda x: x['publish'], self.articles.values()),
                 cmp=lambda x,y: self.compare_articles(x, y),
@@ -147,20 +150,26 @@ class AINewsPublisher():
                     break
             if free_cat:
                 self.published_articles.append(article)
+                self.articles[article['urlid']]['transcript'].append('Published')
                 for cat in article['categories']:
                     cat_counts[cat] += 1
 
         self.semiauto_email_output = ""
 
     def compare_articles(self, article1, article2):
+        dupcount1 = len(article1['duplicates'])
+        dupcount2 = len(article2['duplicates'])
         relevance1 = self.sources[article1['publisher']]
         relevance2 = self.sources[article2['publisher']]
         cat_count1 = len(article1['categories'])
         cat_count2 = len(article2['categories'])
-        if cmp(relevance1, relevance2) == 0:
-            return cmp(cat_count1, cat_count2)
+        if cmp(dupcount1, dupcount2) == 0:
+            if cmp(relevance1, relevance2) == 0:
+                return cmp(cat_count1, cat_count2)
+            else:
+                return cmp(relevance1, relevance2)
         else:
-            return cmp(relevance1, relevance2)
+            return cmp(dupcount1, dupcount2)
 
     def update_db(self, article):
         self.db.execute("delete from categories where urlid = %s", article['urlid'])
@@ -215,6 +224,8 @@ class AINewsPublisher():
         for urlid in self.articles:
             urlids_output += str(urlid) + '\n'
             article_wiki = ArticlePmWiki()
+            article_wiki.year = self.today.strftime("%Y")
+            article_wiki.dupthreshold = float(config['duplicates.threshold'])
             article_wiki.n = self.articles[urlid]
             savefile(paths['ainews.output'] + "aiarticles/%d" % urlid,
                     str(article_wiki))

@@ -2,6 +2,30 @@ from datetime import date, timedelta
 from AINewsCorpus import AINewsCorpus
 from AINewsConfig import config
 
+def add_to_duplicates(duplicates, urlid1, urlid2):
+    found = False
+    for dupset in duplicates:
+        if urlid1 in dupset or urlid2 in dupset:
+            dupset.add(urlid1)
+            dupset.add(urlid2)
+            found = True
+            break
+    if not found:
+        dupset = set()
+        dupset.add(urlid1)
+        dupset.add(urlid2)
+        duplicates.append(dupset)
+
+def compare_articles(article1, article2, sources):
+    relevance1 = sources[article1['publisher']]
+    relevance2 = sources[article2['publisher']]
+    cat_count1 = len(article1['categories'])
+    cat_count2 = len(article2['categories'])
+    if cmp(relevance1, relevance2) == 0:
+        return cmp(cat_count1, cat_count2)
+    else:
+        return cmp(relevance1, relevance2)
+
 class AINewsDuplicates:
     def __init__(self):
         self.corpus = AINewsCorpus()
@@ -11,70 +35,55 @@ class AINewsDuplicates:
         date_end = date.today()
         cutoff = float(config['duplicates.threshold'])
         all_articles = self.corpus.get_articles_daterange(date_start, date_end)
+        duplicates = []
+        similarities = {}
 
         urlids = sorted(all_articles.keys())
         for i in range(0, len(urlids) - 1):
             for j in range(i+1, len(urlids)):
-                # only compare with articles that haven't been filtered out
-                if urlids[j] not in articles \
-                        or not articles[urlids[j]]['publish']:
-                    continue
+                # only compare to articles that might be published this week
+                if urlids[j] not in articles: continue
 
                 tfidf1 = all_articles[urlids[i]]['tfidf']
                 tfidf2 = all_articles[urlids[j]]['tfidf']
                 similarity = self.corpus.cos_sim(tfidf1, tfidf2)
 
                 if similarity >= cutoff:
-                    print urlids[i],urlids[j],similarity
-
-                    # if article i has already been published (processed),
+                    # if article i has not been published
+                    if urlids[i] in articles: # already know urlids[j] in articles
+                        add_to_duplicates(duplicates, urlids[i], urlids[j])
+                        similarities[(urlids[i], urlids[j])] = similarity
+                        similarities[(urlids[j], urlids[i])] = similarity
+                    # if article i has already been processed,
                     # then just don't publish article j
-                    if all_articles[urlids[i]]['processed']:
-                        articles[urlids[j]]['publish'] = False
-                        articles[urlids[j]]['transcript'].append(
-                                'Rejected because duplicate (sim=%.3f, cutoff=%.3f) of already published article %s' % \
-                                        (similarity, cutoff, str(urlids[i])))
-                    # otherwise, neither article is published yet, so we have
-                    # to decide which is definitive; the rule is take the
-                    # article that comes from a more 'relevant' source, or, if
-                    # sources are equally relevant, take the article with more
-                    # categories
                     else:
-                        if not articles[urlids[i]]['publish']: continue
-
-                        # more relevant source is better
-                        relevance1 = sources[articles[urlids[i]]['publisher']]
-                        relevance2 = sources[articles[urlids[j]]['publisher']]
-                        
-                        if relevance1 > relevance2:
+                        articles[urlids[j]]['duplicates'] = \
+                                [(urlids[i], all_articles[urlids[i]]['title'], similarity)]
+                        if articles[urlids[j]]['publish']:
                             articles[urlids[j]]['publish'] = False
                             articles[urlids[j]]['transcript'].append(
-                                    'Rejected because duplicate (sim=%.3f, cutoff=%.3f) of article %s, which comes from a more relevant source (%s:%d > %s:%d)' % \
-                                            (similarity, cutoff, str(urlids[j]),
-                                                articles[urlids[i]]['publisher'],
-                                                relevance1,
-                                                articles[urlids[j]]['publisher'],
-                                                relevance2))
-                        elif relevance2 > relevance1:
-                            articles[urlids[i]]['publish'] = False
-                            articles[urlids[i]]['transcript'].append(
-                                    'Rejected because duplicate (sim=%.3f, cutoff=%.3f) of article %s, which comes from a more relevant source (%s:%d > %s:%d)' % \
-                                            (similarity, cutoff, str(urlids[j]),
-                                                articles[urlids[j]]['publisher'],
-                                                relevance2,
-                                                articles[urlids[i]]['publisher'],
-                                                relevance1))
-
-                        # if source relevance is the same, more categories is better
-                        numcats_i = len(articles[urlids[i]]['categories'])
-                        numcats_j = len(articles[urlids[j]]['categories'])
-                        if numcats_i > numcats_j:
-                            articles[urlids[j]]['publish'] = False
-                            articles[urlids[j]]['transcript'].append(
-                                    'Rejected because duplicate (sim=%.3f, cutoff=%.3f) of article %s, which has more categories' % \
+                                    ("Rejected because duplicate (sim=%.3f, " +
+                                    "cutoff=%.3f) of already processed article %s") % \
                                             (similarity, cutoff, str(urlids[i])))
-                        else:
-                            articles[urlids[i]]['publish'] = False
-                            articles[urlids[i]]['transcript'].append(
-                                    'Rejected because duplicate (sim=%.3f, cutoff=%.3f) of article %s, which has more or equal number of categories' % \
-                                            (similarity, cutoff, str(urlids[j])))
+
+        for dupset in duplicates:
+            for urlid in dupset:
+                dupset2 = dupset.copy()
+                dupset2.remove(urlid)
+                articles[urlid]['duplicates'] = \
+                        map(lambda u: (u, articles[u]['title'], similarities[(u,urlid)]),
+                            filter(lambda u: (u,urlid) in similarities, dupset2))
+
+            sorted_dups = sorted(filter(lambda u: articles[u]['publish'], dupset),
+                    cmp=lambda x,y: compare_articles(articles[x], articles[y], sources),
+                    reverse = True)
+            if(len(sorted_dups) > 0):
+                # first in sorted set is chosen; rest are dumped
+                articles[sorted_dups[0]]['transcript'].append("Preferred over duplicates")
+
+                for urlid in sorted_dups[1:]:
+                    if articles[urlid]['publish']:
+                        articles[urlid]['publish'] = False
+                        articles[urlid]['transcript'].append(("Rejected because duplicate " +
+                                "%s was chosen instead") % sorted_dups[0])
+

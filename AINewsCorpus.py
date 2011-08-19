@@ -111,7 +111,7 @@ class AINewsCorpus:
             return {'urlid': urlid, 'url': row[0], 'title': row[1],
                     'content': row[2], 'pubdate': row[3], 'crawldate': row[4],
                     'processed': processed, 'publisher': row[6],
-                    'categories': categories,
+                    'categories': categories, 'duplicates': [],
                     'wordfreq': wordfreq, 'tfidf': self.get_tfidf(urlid, wordfreq)}
         else:
             return None
