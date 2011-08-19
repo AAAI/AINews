@@ -14,12 +14,21 @@ import time
 import types
 import traceback
 from datetime import date, timedelta
+import string
+
+import ents
 
 from AINewsConfig import config, paths
 from AINewsTools import savefile, loadcsv, strip_html, savepickle, loadfile, trunc
 from AINewsParser import AINewsParser
 from AINewsSourceParser import *
 from AINewsDB import AINewsDB
+
+def convert_to_printable(text):
+    result = ""
+    for c in text:
+        if c in string.printable: result += str(c)
+    return result
 
 class AINewsCrawler:
     def __init__(self):
@@ -39,7 +48,7 @@ class AINewsCrawler:
             items = row[1].split('::')
             sources.append((row[0], items[0], items[1], row[2]))
         return sources
-        
+
     def crawl(self):
         """
         Crawl the news by source lists (Search page or RSS).
@@ -59,9 +68,9 @@ class AINewsCrawler:
                 for candidate in parser.candidates:
                     if len(candidate) != 4: continue
                     url = candidate[0].encode('utf-8')
-                    title = (re.sub(r'\s+', ' ', candidate[1])).strip()
+                    title = convert_to_printable(ents.convert((re.sub(r'\s+', ' ', candidate[1])))).strip()
                     pubdate = candidate[2]
-                    content = (re.sub(r'\s+', ' ', candidate[3])).strip()
+                    content = convert_to_printable(ents.convert((re.sub(r'\s+', ' ', candidate[3])))).strip()
                     if isinstance(title, types.StringType):
                         title = unicode(title, errors = 'ignore')
                     if isinstance(content, types.StringType):
