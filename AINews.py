@@ -66,20 +66,7 @@ def crawl(opts):
 
     rss_flag = True
     crawler = AINewsCrawler()
-    for opt, val in opts:
-        if opt in ("-r", "--rss"):
-            rss_flag = True
-        elif opt in ("-f", "--file"):
-            rss_flag = False
-            crawler.crawl_urlfile(val)
-            print ("file")
-        elif opt in ("-u", "--url"):
-            rss_flag = False
-            crawler.crawl_url(val)
-        else:
-            assert False, "unhandled option"
-    if rss_flag:
-        crawler.crawl()
+    crawler.crawl()
 
 def train():
     svm = AINewsSVM()
