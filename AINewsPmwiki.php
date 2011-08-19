@@ -267,6 +267,7 @@ if (preg_match("/$curr/", $page['text']) == 0) {
 # Add today news to AITopics.NewsArchive page
 $curr = date("M d");
 $year = date("Y");
+$pagename_result = "AINewsFinder.$today-News";
 $archivepage = "AITopics.NewsArchive";
 $page = ReadPage($archivepage, READPAGE_CURRENT);
 $i = preg_match("/\'\'\'$year\'\'\'/", $page['text']);
@@ -278,7 +279,7 @@ if ($i == 0) {
     $page['text'] =  $pretext."'''$year'''\n*[[".$pagename_result."|$curr]][[<<]]\n".$protext;
     WritePage($archivepage, $page);
 }else{
-    if(preg_match("/$curr/", $page['text'] == 0) {
+    if(preg_match("/$curr/", $page['text']) == 0) {
         $pos = strpos($page['text'], "'''$year'''");
         $pretext = substr($page['text'], 0, $pos+11);
         $protext = substr($page['text'], $pos+11);
