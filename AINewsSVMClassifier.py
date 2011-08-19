@@ -46,14 +46,14 @@ class AINewsSVMClassifier:
             f = open(paths['svm.svm_data']+'predict-'+cat+'.output', 'r')
             lines = f.readlines()
             f.close()
+            # first line of output file says "labels -1 1" or whatever;
+            # the order could be different, so we have to check
             labels = re.match('labels (-?1) (-?1)', lines[0]).group(1,2)
             if labels[0] == '1': pos_label = 0
             else: pos_label = 1
-            # first line of output file says "labels -1 1" or whatever
             for i in range(1, len(lines)):
-                if not articles[urlids[i-1]]['publish']: continue
                 (prediction, prob1, prob2) = \
-                        re.match('(-?1) (\d\.\d+e?-?\d*) (\d\.\d+e?-?\d*)', lines[i]).group(1,2,3)
+                        re.match('(-?1) (\d\.?\d*e?-?\d*) (\d\.?\d*e?-?\d*)', lines[i]).group(1,2,3)
                 if pos_label == 0: prob_yes = prob1
                 else: prob_yes = prob2
                 articles[urlids[i-1]]['cat_probs'][cat] = prob_yes
@@ -65,10 +65,10 @@ class AINewsSVMClassifier:
 
     def evaluate(self, ident):
         results = {}
-        #(train_corpus, predict_corpus) = self.corpus.load_corpus(ident, 0.9, True)
-        #self.generate_libsvm_input(train_corpus, 'train')
-        #self.generate_libsvm_input(predict_corpus, 'predict')
-        #print "Done generating SVM input."
+        (train_corpus, predict_corpus) = self.corpus.load_corpus(ident, 0.9, True)
+        self.generate_libsvm_input(train_corpus, 'train')
+        self.generate_libsvm_input(predict_corpus, 'predict')
+        print "Done generating SVM input."
         results = self.libsvm_train()
         print results
 
