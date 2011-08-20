@@ -50,11 +50,11 @@ class AINewsDuplicates:
 
                 if similarity >= cutoff:
                     # if article i has not been published
-                    if urlids[i] in articles: # already know urlids[j] in articles
+                    if not all_articles[urlids[i]]['published']:
                         add_to_duplicates(duplicates, urlids[i], urlids[j])
                         similarities[(urlids[i], urlids[j])] = similarity
                         similarities[(urlids[j], urlids[i])] = similarity
-                    # if article i has already been processed,
+                    # if article i has already been published,
                     # then just don't publish article j
                     else:
                         articles[urlids[j]]['duplicates'] = \
@@ -63,21 +63,22 @@ class AINewsDuplicates:
                             articles[urlids[j]]['publish'] = False
                             articles[urlids[j]]['transcript'].append(
                                     ("Rejected because duplicate (sim=%.3f, " +
-                                    "cutoff=%.3f) of already processed article %s") % \
+                                    "cutoff=%.3f) of already published article %s") % \
                                             (similarity, cutoff, str(urlids[i])))
 
         for dupset in duplicates:
             for urlid in dupset:
-                dupset2 = dupset.copy()
-                dupset2.remove(urlid)
-                articles[urlid]['duplicates'] = \
-                        map(lambda u: (u, articles[u]['title'], similarities[(u,urlid)]),
-                            filter(lambda u: (u,urlid) in similarities, dupset2))
+                if urlid in articles:
+                    dupset2 = dupset.copy()
+                    dupset2.remove(urlid)
+                    articles[urlid]['duplicates'] = \
+                            map(lambda u: (u, articles[u]['title'], similarities[(u,urlid)]),
+                                filter(lambda u: u in articles and (u,urlid) in similarities, dupset2))
 
-            sorted_dups = sorted(filter(lambda u: articles[u]['publish'], dupset),
+            sorted_dups = sorted(filter(lambda u: u in articles and articles[u]['publish'], dupset),
                     cmp=lambda x,y: compare_articles(articles[x], articles[y], sources),
                     reverse = True)
-            if(len(sorted_dups) > 0):
+            if(len(sorted_dups) > 1):
                 # first in sorted set is chosen; rest are dumped
                 articles[sorted_dups[0]]['transcript'].append("Preferred over duplicates")
 

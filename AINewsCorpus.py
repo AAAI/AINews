@@ -97,12 +97,14 @@ class AINewsCorpus:
             cat_table = 'categories'
 
         row = self.db.selectone("""select u.url, u.title, u.content, u.pubdate,
-            u.crawldate, u.processed, u.publisher from %s as u where u.urlid = %s""" % \
+            u.crawldate, u.processed, u.published, u.publisher from %s as u where u.urlid = %s""" % \
             (table, urlid))
         if row != None:
             wordfreq = self.txtpro.simpletextprocess(urlid, row[2])
             processed = False
             if row[5] == 1: processed = True
+            published = False
+            if row[6] == 1: published = True
             categories = []
             cat_rows = self.db.selectall("""select category from %s
                 where urlid = %s""" % (cat_table, urlid))
@@ -110,7 +112,8 @@ class AINewsCorpus:
                 categories.append(cat_row[0])
             return {'urlid': urlid, 'url': row[0], 'title': row[1],
                     'content': row[2], 'pubdate': row[3], 'crawldate': row[4],
-                    'processed': processed, 'publisher': row[6],
+                    'processed': processed, 'published': published,
+                    'publisher': row[7],
                     'categories': categories, 'duplicates': [],
                     'wordfreq': wordfreq, 'tfidf': self.get_tfidf(urlid, wordfreq)}
         else:
@@ -135,6 +138,11 @@ class AINewsCorpus:
         for urlid in articles:
             self.db.execute("update urllist set processed = 1 where urlid = %s",
                     urlid)
+
+    def mark_published(self, articles):
+        for article in articles:
+            self.db.execute("update urllist set published = 1 where urlid = %s",
+                    article['urlid'])
 
     def restore_corpus(self):
         self.wordids = {}

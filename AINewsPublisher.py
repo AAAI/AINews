@@ -158,8 +158,12 @@ class AINewsPublisher():
             if free_cat:
                 self.published_articles.append(article)
                 self.articles[article['urlid']]['transcript'].append('Published')
+                self.articles[article['urlid']]['published'] = True
                 for cat in article['categories']:
                     cat_counts[cat] += 1
+
+        # update published articles in db
+        self.corpus.mark_published(self.published_articles)
 
         self.semiauto_email_output = ""
 
