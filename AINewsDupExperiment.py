@@ -15,11 +15,9 @@ import math
 from datetime import datetime
 
 from AINewsCorpus import AINewsCorpus
-from AINewsSim import AINewsSim
-from AINewsDB import AINewsDB
+from AINewsSummarizer import AINewsSummarizer
 from AINewsConfig import paths
 from AINewsTools import loadpickle, savepickle
-#from LuceneSim import LuceneSim
 
 """
 The following 20 pairs of duplicated news set
@@ -102,9 +100,10 @@ except:
 duplists += duplist_stored
 
 corpus = AINewsCorpus()
+summarizer = AINewsSummarizer()
 
 id_begin = 315
-id_end = 1400
+id_end = 1500
 ####################################
 # idset records all the news id
 ####################################
@@ -119,24 +118,15 @@ for dupset in duplists:
         for j in range(i+1, n):
             checklist.add(tuple([int(sortedlist[i]),int(sortedlist[j])]))
 
-def compute_sim(aisim):
-    group = 0
-    for dupset in duplists:
-        n = len(dupset[0])
-        for i in range(n-1):
-            for j in range(i+1, n):
-                print group, dupset[0][i], dupset[0][j],
-                print aisim.sim(dupset[0][i], dupset[0][j])
-        group +=1
-
-def recallprecision(docs, aisim):
+def recallprecision(articles):
     """
     recall and precision for simularity method, make all pairs from urllist
     and compute the similarity.
     """
+    urlids = articles.keys()
     truepos = {}
     falsepos = {}
-    #cutoff range [0.01, 1.0]
+    # cutoff range [0.01, 1.0]
     cutoff_begin = 0
     cutoff_end = 100
     for cutoff in range(cutoff_begin, cutoff_end):
@@ -145,7 +135,8 @@ def recallprecision(docs, aisim):
     
     total = 0
     pos = 0
-    N = len(docs)
+    N = len(urlids)
+    print "Number of articles: %d" % N
     progress_step = N*(N-1)/200.0
     
     simvals = {}
@@ -153,8 +144,9 @@ def recallprecision(docs, aisim):
         if (i % (N/10)) == 0:
             print "Progress: %.0f%%" % (float(total)/progress_step)
         for j in range(i+1, N):
-            key = (int(docs[i][0]), int(docs[j][0]))
-            val = corpus.sim(docs[i], docs[j])
+            key = (urlids[i], urlids[j])
+            val = corpus.cos_sim(articles[urlids[i]]['tfidf'],
+                    articles[urlids[j]]['tfidf'])
             total += 1
             simvals[key] = val
             if key in checklist:
@@ -163,10 +155,12 @@ def recallprecision(docs, aisim):
             else:
                 flag = False
                 
-            if docs[i][3] == None or docs[j][3] == None:
+            if articles[urlids[i]]['pubdate'] == None or \
+                    articles[urlids[j]]['pubdate'] == None:
                 datedelta = 0.0
             else:
-                datedelta = math.fabs((docs[i][3]-docs[j][3]).days)
+                datedelta = math.fabs((articles[urlids[i]]['pubdate'] - \
+                        articles[urlids[j]]['pubdate']).days)
             cutoff = cutoff_begin*0.01
             for x in range(cutoff_begin,cutoff_end):
                 if datedelta < 14 and val >= cutoff:
@@ -206,29 +200,28 @@ def recallprecision(docs, aisim):
             "precision:", best_p, "recall:", best_r, "f1:",best_f1
     print
 
-    db = AINewsDB()
     done = False
     for i in range(0, N-1):
         if done: break;
         for j in range(i+1, N):
             if done: break;
-            key = (int(docs[i][0]), int(docs[j][0]))
+            key = (urlids[i], urlids[j])
             if key in notduplist_stored: continue
-            val = corpus.sim(docs[i], docs[j])
+            val = corpus.cos_sim(articles[urlids[i]]['tfidf'],
+                    articles[urlids[j]]['tfidf'])
             if key not in checklist and val >= (best_cutoff*0.01):
-                (title1, desc1, date1) = db.selectone( \
-                        "select title,description,pubdate from urllist " +
-                        "where rowid = %s" % docs[i][0])
-                (title2, desc2, date2) = db.selectone( \
-                        "select title,description,pubdate from urllist " +
-                        "where rowid = %s" % docs[j][0])
-                if date1 == None or date2 == None:
+                if articles[urlids[i]]['pubdate'] == None or \
+                        articles[urlids[j]]['pubdate'] == None:
                     datedelta = 0.0
                 else:
-                    datedelta = math.fabs((date1-date2).days)
+                    datedelta = math.fabs((articles[urlids[i]]['pubdate'] - \
+                            articles[urlids[j]]['pubdate']).days)
                 if datedelta > 14: continue
                 print "-- %s (%s)\n\n%s\n\n-- %s (%s)\n\n%s\n\n" % \
-                        (title1, str(date1), desc1, title2, str(date2), desc2)
+                        (articles[urlids[i]]['title'], str(articles[urlids[i]]['pubdate']),
+                            summarizer.summarize_article(corpus, articles[urlids[i]], 4),
+                            articles[urlids[j]]['title'], str(articles[urlids[j]]['pubdate']),
+                            summarizer.summarize_article(corpus, articles[urlids[j]], 4))
                 answer = raw_input("Duplicates? (y/n/q): ")
                 if answer == "y" or answer == "Y":
                     duplist_stored.append(([key[0], key[1]], "duplist_stored"))
@@ -311,28 +304,10 @@ if __name__ == "__main__":
     start = datetime.now()
     type = COSINE_RECALLPRECISION
 
-    urllist = map(lambda urlid: str(urlid), range(id_begin, id_end))
+    articles = corpus.get_articles_idrange(id_begin, id_end)
 
-    (train_corpus, predict_corpus) = corpus.load_corpus( \
-            "urllist:urllist:"+','.join(urllist), 1.0, True)
-    
-    # LuceneSim Parameters
-    index_dir = "lucene/wiki"
-    hit_num = 100
-    querier_type = SEPARATE
-    
     if type == COSINE_RECALLPRECISION:
-        aisim = AINewsSim()
-        recallprecision(train_corpus, aisim)
-    elif type == LUCENE:
-        aisim = LuceneSim(index_dir, hit_num, querier_type)
-        compute_sim(aisim)
-    elif type == LUCENE_ONE:
-        aisim = LuceneSim(index_dir, hit_num, querier_type)
-        print aisim.sim(314,321)
-    elif type == LUCENE_RECALLPRECISION:
-        aisim = LuceneSim(index_dir, hit_num, querier_type)
-        recallprecision(range(314, 665), aisim)
+        recallprecision(articles)
     end = datetime.now()
     print end - start
    

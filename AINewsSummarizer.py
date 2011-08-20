@@ -25,7 +25,7 @@ from AINewsConfig import stopwords
 
 class AINewsSummarizer:
     def __init__(self):
-        pass
+        self.sent_detector = nltk.data.load('tokenizers/punkt/english.pickle')
 
     def reorder_sentences(self, output_sentences, content):
         output_sentences.sort(lambda s1, s2:
@@ -46,8 +46,7 @@ class AINewsSummarizer:
         # for the analysis, but actual_sentences is used in the results
         # so capitalization will be correct.
         
-        sent_detector = nltk.data.load('tokenizers/punkt/english.pickle')
-        actual_sentences = sent_detector.tokenize(article['content'])
+        actual_sentences = self.sent_detector.tokenize(article['content'])
         working_sentences = [sentence.lower() for sentence in actual_sentences]
 
         # iterate over the most frequent words, and add the first sentence

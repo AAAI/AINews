@@ -122,7 +122,15 @@ class AINewsCorpus:
     def get_articles_daterange(self, date_start, date_end):
         articles = {}
         rows = self.db.selectall("""select urlid from urllist
-            where pubdate >= '%s' and pubdate <= '%s'""" % (date_start, date_end))
+            where pubdate >= %s and pubdate <= %s""", (date_start, date_end))
+        for row in rows:
+            articles[row[0]] = self.get_article(row[0])
+        return articles
+
+    def get_articles_idrange(self, urlid_start, urlid_end):
+        articles = {}
+        rows = self.db.selectall("""select urlid from urllist
+            where urlid >= %s and urlid <= %s""", (urlid_start, urlid_end))
         for row in rows:
             articles[row[0]] = self.get_article(row[0])
         return articles

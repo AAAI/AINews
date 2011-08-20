@@ -45,18 +45,18 @@ class AINewsDB:
             self.cursor.execute(query, args)
         return self.cursor.lastrowid
 
-    def selectone(self, query):
+    def selectone(self, query, args = None):
         """
         Execute SQL query with only one return value
         """
-        self.cursor.execute(query)
+        self.execute(query, args)
         return self.cursor.fetchone()
         
-    def selectall(self, query):
+    def selectall(self, query, args = None):
         """
         Execute SQL query with multiple return values
         """
-        self.cursor.execute(query)
+        self.execute(query, args)
         return self.cursor.fetchall()
     
     def isindexed(self, url):
@@ -66,8 +66,6 @@ class AINewsDB:
         @type url: C{string}
         """
         url = re.escape(url.encode('utf-8'))
-        self.cursor.execute \
-            ("select urlid from urllist where url='%s'" % url)
-        urlrow = self.cursor.fetchone()
+        urlrow = self.selectone("select urlid from urllist where url=%s", (url))
         return (urlrow != None)
 
