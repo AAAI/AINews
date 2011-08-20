@@ -16,7 +16,7 @@ from BeautifulSoup import BeautifulSoup, Comment, BeautifulStoneSoup, \
 
 from AINewsConfig import config, dateformat_regexps
 from AINewsParser import AINewsParser
-from AINewsTools import strip_html
+from AINewsTools import strip_html, loadfile2
 
 def ParserFactory(publisher, type):
     """
@@ -26,7 +26,9 @@ def ParserFactory(publisher, type):
     @param type: either 'search' or 'rss'
     @type type: C{string}
     """
-    if publisher == "Wall Street Journal" and type == 'search':
+    if publisher == "UserSubmitted": 
+        parser = UserSubmittedParser()
+    elif publisher == "Wall Street Journal" and type == 'search':
         parser = WSJParser()
     elif publisher == "Forbes" and type == 'search':
         parser = ForbesParser()
@@ -94,6 +96,54 @@ def ParserFactory(publisher, type):
         parser = None
     return parser
 
+class UserSubmittedParser(AINewsParser):
+    """
+    Parser for user-submitted news.
+    """
+    def parse_sourcepage(self, url):
+        xmlcontent = loadfile2(url)
+        xmlcontent = unicode(xmlcontent, errors = 'ignore')
+        try:
+            xmlsoup = BeautifulSoup(xmlcontent, \
+                        convertEntities = BeautifulStoneSoup.HTML_ENTITIES)
+        except Exception, error:
+            return False
+        
+        souplist = xmlsoup.findAll('news')
+        for soup in souplist:
+            type = self.extract_genenraltext(soup.find('type'))
+            if type != "NewArticle":
+                return
+            
+            url = self.extract_genenraltext(soup.find('url'))
+            date_str = self.extract_genenraltext(soup.find('date'))
+            pub_date = self.extract_date(date_str)
+
+            res = self.parse_url(url)
+            if not res or self.url == None:
+                continue
+            try:
+                self.soup = BeautifulSoup(self.html)
+            except Exception, error:
+                if self.debug: print >> sys.stderr, "SOUP ERROR: %s" % error
+                continue
+            head = self.soup.find('head')
+            title = head.find('title')
+            if title != None:
+                title = (title.string).encode('utf-8')
+                title = re.sub(r'\s+', ' ', title)
+            else: continue
+            self.candidates.append([url, title, pub_date])
+
+    def parse_storypage(self):
+        for i, candidate in enumerate(self.candidates):
+            res = self.parse_url(candidate[0])
+            if not res or self.url == None or self.db.isindexed(self.url):
+                continue
+            text = self.justext_extract(self.html)
+            if len(text) == 0: continue
+            self.candidates[i].append(text)
+
 class WSJParser(AINewsParser):
     """
     Parser for Wall Street Journal.
@@ -137,11 +187,7 @@ class WSJParser(AINewsParser):
             title = ' '.join([t.getText() for t in item.findAll('a')])
             # Extract description
             
-            item_p = item.find('p')
-            if item_p == None: continue
-            desc = item.find('p').getText()
-            
-            self.candidates.append([url, title, pub_date, desc])
+            self.candidates.append([url, title, pub_date])
     
     def parse_storypage(self):
         """
@@ -1700,7 +1746,6 @@ class GoogleNewsRSSParser(AINewsParser):
                 continue
             text = self.justext_extract(self.html)
             if len(text) == 0: continue
-            text = re.sub(r'&.*?;', ' ', text)
             self.candidates[i].append(text)
 
 class ScienceDailyRSSParser(AINewsParser):

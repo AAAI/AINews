@@ -78,7 +78,9 @@ class AINewsPublisher():
             self.articles[urlid]['white_wordfreq'] = white_wordfreq
 
             # require at least two different whitelisted terms
-            if len(white_wordfreq) < 2:
+            # unless the article is user-submitted
+            if len(white_wordfreq) < 2 \
+                    and self.articles[urlid]['publisher'] != 'UserSubmitted':
                 self.articles[urlid]['publish'] = False
                 self.articles[urlid]['transcript'].append(
                         'Rejected due to only one or no whitelisted terms')
@@ -86,14 +88,16 @@ class AINewsPublisher():
         # update categories based on SVM classifier predictions
         self.svm_classifier.predict(self.articles)
 
-        # drop articles classified as 'NotRelated'
+        # drop articles classified as 'NotRelated' unless the article
+        # is user-submitted
         for urlid in self.articles:
-            if 'NotRelated' in self.articles[urlid]['categories']:
+            if 'NotRelated' in self.articles[urlid]['categories'] \
+                    and self.articles[urlid]['publisher'] != 'UserSubmitted':
                 self.articles[urlid]['publish'] = False
                 self.articles[urlid]['transcript'].append(
                         'Rejected due to NotRelated classification')
 
-        # drop articles with no categories
+        # drop articles with no categories (even if user-submitted)
         for urlid in self.articles:
             if len(self.articles[urlid]['categories']) == 0:
                 self.articles[urlid]['publish'] = False
@@ -113,7 +117,10 @@ class AINewsPublisher():
 
         for urlid in self.articles:
             try:
-                print urlid, self.articles[urlid]['publish'], self.articles[urlid]['title'], self.articles[urlid]['categories'], self.articles[urlid]['summary']
+                print urlid, self.articles[urlid]['publish'], \
+                    self.articles[urlid]['title'], \
+                    self.articles[urlid]['categories'], \
+                    self.articles[urlid]['summary']
                 print
             except:
                 pass

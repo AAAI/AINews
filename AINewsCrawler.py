@@ -42,7 +42,7 @@ class AINewsCrawler:
         Get the news source list.
         """
         sources = []
-        sql = "select url,parser,description from sources where status = 1"
+        sql = "select url,parser,description from sources where status = 1 order by id desc"
         rows = self.db.selectall(sql)
         for row in rows:
             items = row[1].split('::')

@@ -31,7 +31,6 @@ import locale
 from AINewsConfig import config, paths
 from AINewsCrawler import AINewsCrawler
 from AINewsPublisher import AINewsPublisher
-from AINewsSubmitNews import AINewsSubmitNews
 
 def usage():
     """
@@ -60,11 +59,6 @@ def usage():
     
     
 def crawl(opts):
-    file = paths['ainews.output'] + "submit_news.xml"
-    sn = AINewsSubmitNews()
-    sn.process(file)
-
-    rss_flag = True
     crawler = AINewsCrawler()
     crawler.crawl()
 
