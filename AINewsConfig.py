@@ -16,7 +16,7 @@ db = loadconfig("config/db.ini")
 paths = loadconfig("config/paths.ini")
 
 whitelist = []
-for line in loadfile("config/whitelist.txt"):
+for line in loadfile(paths['ainews.whitelist']):
     w = line.strip()
     if w != ' ':
         whitelist.append(w)

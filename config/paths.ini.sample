@@ -21,6 +21,8 @@ rss = /path/to/rss/
 
 stoplist = /path/to/stoplist.txt
 
+whitelist = /path/to/whitelist.txt
+
 [libraries]
 
 ; (leave trailing slash)
