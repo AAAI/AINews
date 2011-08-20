@@ -69,6 +69,8 @@ class AINewsCrawler:
                     if len(candidate) != 4: continue
                     url = candidate[0].encode('utf-8')
                     title = convert_to_printable(ents.convert((re.sub(r'\s+', ' ', candidate[1])))).strip()
+                    # removing site title like " - NPR"
+                    title = re.sub(r'\s+[:-]\s+.*$', '', title)
                     pubdate = candidate[2]
                     content = convert_to_printable(ents.convert((re.sub(r'\s+', ' ', candidate[3])))).strip()
                     if isinstance(title, types.StringType):
