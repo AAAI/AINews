@@ -1,27 +1,10 @@
-# AINewsFinder 
-# Copyright (C) 2010 
-# Author:   Liang Dong <ldong@clemson.edu>
-# URL: <http://bioinformatics.clemson.edu/ldong>
-# $Id$
-
-"""
-With funds allocated by the Executive Committee, we have hired a summer intern
-to bring AI in the News back online as a twice-monthly service. Liang Dong,
-a CS graduate student from Clemson, is automating the service, under the
-supervision of Bruce Buchanan and Reid Smith, with an AI program, called
-NewsFinder. It first pulls in RSS feeds from Google News and other reliable
-sources and filters out blogs, press releases, and advertisements. A support
-vector machine has been trained with manually scored stories from the web to
-classify each story as "not relevant to AI" (0), or "very interesting" (+5),
-"somewhat interesting" (+3), or "mildly interesting" (+1).
-
-We augment the SVM's scores with a measure of interest (frequency * inverse
-doc frequency) of selected terms and additional heuristics (using multi-word
-phrases) that indicate higher or lower interest. The sources of the articles
-will also be considered, since appearance of a story in a major news publication
-like the NY Times makes it more likely to be asked about.
-
-"""
+# This file is part of NewsFinder.
+# https://github.com/joshuaeckroth/AINews
+#
+# Copyright (c) 2011 by the Association for the Advancement of
+# Artificial Intelligence. This program and parts of it may be used and
+# distributed without charge for non-commercial purposes as long as this
+# notice is included.
 
 import sys
 import os

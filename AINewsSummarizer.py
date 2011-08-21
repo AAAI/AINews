@@ -1,24 +1,12 @@
-# Simple Summarizer 
-# Copyright (C) 2010 Tristan Havelick 
-# Author: Tristan Havelick <tristan@havelick.com>
-# URL: <http://www.tristanhavelick.com>
-# $Id$
-"""
-A summarizer based on the algorithm found in Classifier4J by Nick Lothan.      
-In order to summarize a document this algorithm first determines the 
-frequencies of the words in the document.  It then splits the document
-into a series of sentences.  Then it creates a summary by including the
-first sentence that includes each of the most frequent words.  Finally
-summary's sentences are reordered to reflect that of those in the original 
-document.
-Original Author: Tristan Havelick
-Modified by: Liang Dong
-original code url: http://tristanhavelick.com/summarize.zip
-"""
+# This file is part of NewsFinder.
+# https://github.com/joshuaeckroth/AINews
+#
+# Copyright (c) 2011 by the Association for the Advancement of
+# Artificial Intelligence. This program and parts of it may be used and
+# distributed without charge for non-commercial purposes as long as this
+# notice is included.
 
 from operator import itemgetter
-from nltk.probability import FreqDist 
-from nltk.tokenize import RegexpTokenizer
 import nltk.data
 
 from AINewsConfig import stopwords

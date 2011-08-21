@@ -1,3 +1,11 @@
+# This file is part of NewsFinder.
+# https://github.com/joshuaeckroth/AINews
+#
+# Copyright (c) 2011 by the Association for the Advancement of
+# Artificial Intelligence. This program and parts of it may be used and
+# distributed without charge for non-commercial purposes as long as this
+# notice is included.
+
 """
 AINewsConfig reads the configure file: config.ini.
 It parses the config.ini as well as pre-define several static parameters.
