@@ -77,7 +77,13 @@ class AINewsCrawler:
                 for candidate in parser.candidates:
                     if len(candidate) != 4: continue
                     url = candidate[0].encode('utf-8')
+                    print "Fetching", url
                     title = convert_to_printable(ents.convert((re.sub(r'\s+', ' ', candidate[1])))).strip()
+                    # if publisher is GoogleNews, extract true publisher from title
+                    if publisher == "GoogleNews":
+                        true_publisher = re.match(r'^.*\- ([^\-]+)$', title).group(1)
+                        publisher = "%s via Google News" % true_publisher
+
                     # removing site title like " - NPR"
                     title = re.sub(r'\s+[:-]\s+.*$', '', title)
                     pubdate = candidate[2]

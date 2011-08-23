@@ -43,11 +43,6 @@ class AINewsPublisher():
         self.txtpro = AINewsTextProcessor()
         self.summarizer = AINewsSummarizer()
 
-        self.sources = {}
-        rows = self.db.selectall("select parser, relevance from sources")
-        for row in rows:
-            self.sources[row[0].split('::')[0]] = int(row[1])
-
         self.articles = {}
         self.published_articles = []
 
@@ -118,7 +113,7 @@ class AINewsPublisher():
 
         # filter out duplicates; some articles may have 'publish' set to False
         # by this function
-        self.duplicates.filter_duplicates(self.articles, self.sources)
+        self.duplicates.filter_duplicates(self.articles)
 
         # add article summaries
         self.summarizer.summarize(self.corpus, self.articles)
@@ -142,7 +137,7 @@ class AINewsPublisher():
         # then by number of categories (more = better)
         unpublished_articles = sorted(
                 filter(lambda x: x['publish'], self.articles.values()),
-                cmp=lambda x,y: self.compare_articles(x, y),
+                cmp=lambda x,y: self.corpus.compare_articles(x, y),
                 reverse = True)
 
         max_cat_count = int(config['publisher.max_cat_count'])
@@ -175,21 +170,6 @@ class AINewsPublisher():
 
         self.semiauto_email_output = ""
 
-    def compare_articles(self, article1, article2):
-        dupcount1 = len(article1['duplicates'])
-        dupcount2 = len(article2['duplicates'])
-        relevance1 = self.sources[article1['publisher']]
-        relevance2 = self.sources[article2['publisher']]
-        cat_count1 = len(article1['categories'])
-        cat_count2 = len(article2['categories'])
-        if cmp(dupcount1, dupcount2) == 0:
-            if cmp(relevance1, relevance2) == 0:
-                return cmp(cat_count1, cat_count2)
-            else:
-                return cmp(relevance1, relevance2)
-        else:
-            return cmp(dupcount1, dupcount2)
-
     def update_db(self, article):
         self.db.execute("delete from categories where urlid = %s", article['urlid'])
         for cat in article['categories']:
@@ -210,6 +190,7 @@ class AINewsPublisher():
         """
         email = LatestNewsEmail()
         email.date = self.today.strftime("%B %d, %Y")
+        email.year = self.today.strftime("%Y")
         email.news = self.published_articles
         email.aitopic_urls = aitopic_urls
         email.topicids = self.topicids

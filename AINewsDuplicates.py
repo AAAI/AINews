@@ -24,21 +24,11 @@ def add_to_duplicates(duplicates, urlid1, urlid2):
         dupset.add(urlid2)
         duplicates.append(dupset)
 
-def compare_articles(article1, article2, sources):
-    relevance1 = sources[article1['publisher']]
-    relevance2 = sources[article2['publisher']]
-    cat_count1 = len(article1['categories'])
-    cat_count2 = len(article2['categories'])
-    if cmp(relevance1, relevance2) == 0:
-        return cmp(cat_count1, cat_count2)
-    else:
-        return cmp(relevance1, relevance2)
-
 class AINewsDuplicates:
     def __init__(self):
         self.corpus = AINewsCorpus()
 
-    def filter_duplicates(self, articles, sources):
+    def filter_duplicates(self, articles):
         date_start = date.today() - timedelta(days = int(config['duplicates.days_back']))
         date_end = date.today()
         cutoff = float(config['duplicates.threshold'])
@@ -84,7 +74,7 @@ class AINewsDuplicates:
                                 filter(lambda u: u in articles and (u,urlid) in similarities, dupset2))
 
             sorted_dups = sorted(filter(lambda u: u in articles and articles[u]['publish'], dupset),
-                    cmp=lambda x,y: compare_articles(articles[x], articles[y], sources),
+                    cmp=lambda x,y: self.corpus.compare_articles(articles[x], articles[y]),
                     reverse = True)
             if(len(sorted_dups) > 1):
                 # first in sorted set is chosen; rest are dumped

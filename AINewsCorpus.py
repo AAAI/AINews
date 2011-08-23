@@ -10,6 +10,7 @@ import sys
 import random
 import math
 import operator
+import re
 from itertools import izip
 from AINewsConfig import config, paths
 from AINewsDB import AINewsDB
@@ -31,8 +32,33 @@ class AINewsCorpus:
                  "Interfaces","MachineLearning","NaturalLanguage","Philosophy",\
                  "Reasoning","Representation", "Robots","ScienceFiction",\
                  "Speech", "Systems","Vision"]
+
+        self.sources = {}
+        rows = self.db.selectall("select parser, relevance from sources")
+        for row in rows:
+            self.sources[row[0].split('::')[0]] = int(row[1])
         
         self.restore_corpus()
+
+    def get_relevance(self, publisher):
+        if re.search(r'via Google News', publisher):
+            publisher = 'GoogleNews'
+        return self.sources[publisher]
+
+    def compare_articles(self, article1, article2):
+        dupcount1 = len(article1['duplicates'])
+        dupcount2 = len(article2['duplicates'])
+        relevance1 = self.get_relevance(article1['publisher'])
+        relevance2 = self.get_relevance(article2['publisher'])
+        cat_count1 = len(article1['categories'])
+        cat_count2 = len(article2['categories'])
+        if cmp(dupcount1, dupcount2) == 0:
+            if cmp(relevance1, relevance2) == 0:
+                return cmp(cat_count1, cat_count2)
+            else:
+                return cmp(relevance1, relevance2)
+        else:
+            return cmp(dupcount1, dupcount2)
 
     def get_tfidf(self, urlid, wordfreq):
         """
