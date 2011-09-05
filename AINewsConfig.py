@@ -26,8 +26,14 @@ paths = loadconfig("config/paths.ini")
 whitelist = []
 for line in loadfile(paths['ainews.whitelist']):
     w = line.strip()
-    if w != ' ':
+    if w != '':
         whitelist.append(w)
+
+blacklist_urls = []
+for line in loadfile(paths['ainews.blacklist_urls']):
+    w = line.strip()
+    if w != '':
+        blacklist_urls.append(w)
 
 stopwords = set()
 try:

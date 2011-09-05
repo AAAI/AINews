@@ -10,13 +10,14 @@ import feedparser
 import PyRSS2Gen
 import sys
 import operator
+import re
 from os import path, mkdir
 from glob import glob
 from random import shuffle
 from subprocess import *
 from datetime import date, datetime, timedelta
 from AINewsTools import savefile
-from AINewsConfig import config, paths, aitopic_urls
+from AINewsConfig import config, paths, aitopic_urls, blacklist_urls
 from AINewsDB import AINewsDB
 from AINewsCorpus import AINewsCorpus
 from AINewsDuplicates import AINewsDuplicates
@@ -73,6 +74,15 @@ class AINewsPublisher():
                         "(earliest valid date is %s while article was " +
                         "published on %s") % (self.earliest_date.strftime('%F'),
                             self.articles[urlid]['pubdate'].strftime('%F')))
+
+        # filter by blacklist (for urls)
+        for urlid in self.articles:
+            for black in blacklist_urls:
+                if re.search(black, self.articles[urlid]['url']):
+                    self.articles[urlid]['publish'] = False
+                    self.articles[urlid]['transcript'].append(
+                        ("Rejected because url matched blacklisted url %s" % black))
+                    break
 
         # filter by whitelist
         for urlid in self.articles:
@@ -293,7 +303,10 @@ class AINewsPublisher():
         topicitems = []
         for i in range(len(topicrsses)):
             topicitems.append([])
+        urlset = set()
         for article in self.published_articles:
+            if article['url'] in urlset: continue
+            urlset.add(article['url'])
             for cat in article['categories']:
                 topicid = self.topicids[cat]
                 topicitems[topicid].append(PyRSS2Gen.RSSItem(
@@ -325,12 +338,12 @@ def publish_rss(rssfile, rssitems):
         if d > now or d < rss_begindate: continue
         if entry.link in urlset: continue
         urlset.add(entry.link)
-        rssitems.append( PyRSS2Gen.RSSItem(
-                        title = entry.title,
-                        link = entry.link,
-                        description = entry.description,
-                        guid = PyRSS2Gen.Guid(entry.link),
-                        pubDate = d))
+        rssitems.append(PyRSS2Gen.RSSItem(
+                     title = entry.title,
+                     link = entry.link,
+                     description = entry.description,
+                     guid = PyRSS2Gen.Guid(entry.link),
+                     pubDate = d))
 
     rssitems = sorted(rssitems, key=lambda e: e.pubDate, reverse=True)
     

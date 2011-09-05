@@ -23,6 +23,8 @@ stoplist = /path/to/stoplist.txt
 
 whitelist = /path/to/whitelist.txt
 
+blacklist_urls = /path/to/blacklist_urls.txt
+
 [libraries]
 
 ; (leave trailing slash)
