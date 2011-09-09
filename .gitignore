@@ -1,8 +1,5 @@
 *.pyc
 config/*.ini
 *.swp
-viewer/.htaccess
-viewer/.htpasswd
-viewer/config.php
-
+wiki
 
