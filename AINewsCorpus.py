@@ -18,20 +18,46 @@ from AINewsTextProcessor import AINewsTextProcessor
 from AINewsTools import loadpickle
 
 class AINewsCorpus:
+    """
+    A corpus is a set of news articles (each with a title, content,
+    and categories) that are used for training and comparison
+    purposes. For training, the corpus provides the training
+    examples. For comparison, the corpus provides the data for various
+    measures like word frequency. This is important in the prediction
+    process: we only want to predict a new article's categories based
+    on word frequencies, and other measures, from the corpus; we don't
+    want articles that have not been "vetted" (articles not part of
+    the corpus) to contribute to these measures.
+
+    A corpus can be "loaded" via C{load_corpus()} or "restored" via
+    C{restore_corpus()}. The difference is the following: when loading a
+    corpus, word frequencies are measured and stored in the database
+    table C{wordlist_eval}; when restoring a corpus, word frequencies
+    are simply retrieved from the database table C{wordlist}. In other
+    words, we load a corpus when we are training or evaluating our
+    training procedures, and we restore a corpus when we are
+    predicting.
+    """
     def __init__(self):
         self.txtpro = AINewsTextProcessor()
         self.cache_urls = {}
 
-        self.wordlist = {}
+        #: A dictionary of word=>word freq in corpus
+        self.dftext = {}
+
+        #: A dictionary of word=>wordid
+        self.idwords = {}
+
+        #: A dictionary of wordid=>word
         self.wordids = {}
 
         self.db = AINewsDB()
 
-        self.categories =["AIOverview","Agents", "Applications", \
-                 "CognitiveScience","Education","Ethics", "Games", "History",\
-                 "Interfaces","MachineLearning","NaturalLanguage","Philosophy",\
-                 "Reasoning","Representation", "Robots","ScienceFiction",\
-                 "Speech", "Systems","Vision"]
+        self.categories = ["AIOverview","Agents", "Applications", \
+                 "CognitiveScience", "Education", "Ethics", "Games", "History", \
+                 "Interfaces", "MachineLearning", "NaturalLanguage", "Philosophy", \
+                 "Reasoning", "Representation", "Robots", "ScienceFiction", \
+                 "Speech", "Systems", "Vision"]
 
         self.sources = {}
         rows = self.db.selectall("select parser, relevance from sources")
@@ -68,17 +94,17 @@ class AINewsCorpus:
         """
         if urlid in self.cache_urls:
             return self.cache_urls[urlid]
-        wordids = {}
+        wordid_freq_pairs = {}
         for word in wordfreq:
             if word in self.dftext:
-                wordids[self.dftext[word][0]] = (wordfreq[word], self.dftext[word][1])
+                wordid_freq_pairs[self.idwords[word]] = (wordfreq[word], self.dftext[word])
 
         data = {}
         distsq = 0.0
-        for wordid in wordids:
-            tfidf = math.log(wordids[wordid][0] + 1, 2) * \
+        for wordid in wordid_freq_pairs:
+            tfidf = math.log(wordid_freq_pairs[wordid][0] + 1, 2) * \
                     (math.log(self.corpus_count, 2) - \
-                    math.log(wordids[wordid][1] + 1, 2))
+                    math.log(wordid_freq_pairs[wordid][1] + 1, 2))
             data[wordid] = tfidf
             distsq += tfidf * tfidf
         dist = math.sqrt(distsq)
@@ -89,14 +115,14 @@ class AINewsCorpus:
         return data
 
     def cos_sim(self, tfidf1, tfidf2):
-        '''
+        """
         A helper function to compute the cos simliarity between
         news story and centroid.
-        @param  data: target news story tfidf vector.
-        @type  data: C{dict}
-        @param centroid: centroid tfidf vector.
-        @type  centroid: C{dict}
-        '''
+        @param  tfidf1: target news story tfidf vector.
+        @type  tfidf1: C{dict}
+        @param tfidf2: centroid tfidf vector.
+        @type  tfidf2: C{dict}
+        """
         sim = 0.0
         for key in tfidf1:
             if key in tfidf2:
@@ -105,21 +131,6 @@ class AINewsCorpus:
                 b = tfidf2[key]
                 sim += a*b
         return sim
-
-    def add_freq_index(self, urlid, wordfreq, categories = []):
-        for word in wordfreq:
-            self.wordlist.setdefault(word, 0)
-            self.wordlist[word] += 1
-
-    def commit_freq_index(self, table):
-        self.dftext = {}
-        self.wordids = {}
-        for word in self.wordlist:
-            rowid = self.db.execute("insert into "+table+" (word, dftext) " + \
-                "values(%s, %s)", (word, self.wordlist[word]))
-            self.wordids[rowid] = word
-            self.dftext[word] = (rowid, self.wordlist[word])
-        self.wordlist = {}
 
     def get_article(self, urlid, corpus = False):
         if corpus:
@@ -191,8 +202,25 @@ class AINewsCorpus:
         rows = self.db.selectall("select rowid, word, dftext from wordlist")
         for row in rows:
             self.wordids[row[0]] = row[1]
-            self.dftext[row[1]] = (row[0], row[2])
+            self.idwords[row[1]] = row[0]
+            self.dftext[row[1]] = row[2]
         self.corpus_count = self.db.selectone("select count(*) from cat_corpus")[0]
+
+    def add_freq_index(self, urlid, wordfreq, categories = []):
+        for word in wordfreq:
+            self.wordcounts.setdefault(word, 0)
+            self.wordcounts[word] += 1
+
+    def commit_freq_index(self, table):
+        self.dftext = {}
+        self.wordids = {}
+        for word in self.wordcounts:
+            rowid = self.db.execute("insert into "+table+" (word, dftext) " + \
+                "values(%s, %s)", (word, self.wordcounts[word]))
+            self.wordids[rowid] = word
+            self.idwords[word] = rowid
+            self.dftext[word] = self.wordcounts[word]
+        self.wordcounts = {}
 
     def load_corpus(self, ident, pct, debug = False):
         if debug:
@@ -222,6 +250,7 @@ class AINewsCorpus:
         self.db.execute("delete from wordlist_eval")
         self.db.execute("alter table wordlist_eval auto_increment = 0")
         self.wordids = {}
+        self.wordcounts = {}
         self.cache_urls = {}
         for c in train_corpus:
             self.add_freq_index(c[0], c[1], c[2].split())
