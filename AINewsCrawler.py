@@ -81,8 +81,10 @@ class AINewsCrawler:
                     title = convert_to_printable(ents.convert((re.sub(r'\s+', ' ', candidate[1])))).strip()
                     # if publisher is GoogleNews, extract true publisher from title
                     if publisher == "GoogleNews":
-                        true_publisher = re.match(r'^.*\- ([^\-]+)$', title).group(1)
-                        publisher = "%s via Google News" % true_publisher
+                        print title
+                        true_publisher = re.match(r'^.* - (.+)$', title).group(1)
+                        true_publisher = "%s via Google News" % true_publisher
+                    else: true_publisher = publisher
 
                     # removing site title like " - NPR"
                     title = re.sub(r'\s+[:-]\s+.*$', '', title)
@@ -95,11 +97,11 @@ class AINewsCrawler:
 
                     if len(title) < 5 or len(content) < 2000: continue
 
-                    urlid = self.put_in_db(url, pubdate, self.today, publisher, \
+                    urlid = self.put_in_db(url, pubdate, self.today, true_publisher, \
                             tag, title, content)
                     if urlid == None: continue
                     try:
-                        print "{ID:%d} %s (%s)" % (urlid, title, str(pubdate))
+                        print "{ID:%d} %s (%s, %s)" % (urlid, title, str(pubdate), true_publisher)
                     except:
                         pass
 
