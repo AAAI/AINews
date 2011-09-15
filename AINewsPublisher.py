@@ -67,7 +67,12 @@ class AINewsPublisher():
 
         # filter by date
         for urlid in self.articles:
-            if self.articles[urlid]['pubdate'] < self.earliest_date:
+            if self.articles[urlid]['pubdate'] == None:
+                # give a meaningful pubdate so that other code doesn't crash
+                self.articles[urlid]['pubdate'] = self.today
+                self.articles[urlid]['publish'] = False
+                self.articles[urlid]['transcript'] = "Rejected due to bogus publication date."
+            elif self.articles[urlid]['pubdate'] < self.earliest_date:
                 self.articles[urlid]['publish'] = False
                 self.articles[urlid]['transcript'].append(
                         ("Rejected because article is too old " +
@@ -269,9 +274,14 @@ class AINewsPublisher():
         <textarea type='hidden' name="text_message_body">%s</textarea>
         <input type='submit' value='Submit Mailing List Message' />
         </form>
+        <h2>Please review the email below. If there are concerns, contact Bruce or Reid:</h2>
+        <p>
+        %s
+        </p>
         </body>
         </html>
-        """ % ("AI Alert - "+str(self.today.strftime("%B %d, %Y")), self.semiauto_email_output)
+        """ % ("AI Alert - "+str(self.today.strftime("%B %d, %Y")),
+               self.semiauto_email_output, self.semiauto_email_output)
         savefile(paths['ainews.html'] + "semiauto_email.html", semiauto)
 
     def publish_pmwiki(self):

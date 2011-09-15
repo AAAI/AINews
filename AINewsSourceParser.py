@@ -127,6 +127,7 @@ class UserSubmittedParser(AINewsParser):
             date_str = self.extract_genenraltext(soup.find('date'))
             pub_date = self.extract_date(date_str)
 
+            print "Checking if user-submitted URL exists:", url
             res = self.parse_url(url)
             if not res or self.url == None:
                 continue
@@ -135,12 +136,13 @@ class UserSubmittedParser(AINewsParser):
             except Exception, error:
                 if self.debug: print >> sys.stderr, "SOUP ERROR: %s" % error
                 continue
-            head = self.soup.find('head')
-            title = head.find('title')
+            title = self.soup.find('title')
             if title != None:
                 title = (title.string).encode('utf-8')
                 title = re.sub(r'\s+', ' ', title)
-            else: continue
+            else:
+                print "No <title> in", url
+                continue
             self.candidates.append([url, title, pub_date])
 
     def parse_storypage(self):
@@ -1744,8 +1746,10 @@ class GoogleNewsRSSParser(AINewsParser):
             if d > self.today or d < self.begindate: continue
             if entry.title[-6:] == '(blog)' \
                 or entry.title[-15:] == '(press release)': continue
+
+            url = re.sub(r'.*?url=(.*)', r'\1', entry.link)
             
-            self.candidates.append([entry.link, entry.title, d])
+            self.candidates.append([url, entry.title, d])
                 
     def parse_storypage(self):
         for i, candidate in enumerate(self.candidates):

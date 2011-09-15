@@ -35,6 +35,12 @@ for line in loadfile(paths['ainews.blacklist_urls']):
     if w != '':
         blacklist_urls.append(w)
 
+blacklist_words = []
+for line in loadfile(paths['ainews.blacklist_words']):
+    w = line.strip()
+    if w != '':
+        blacklist_words.append(w)
+
 stopwords = set()
 try:
     file = open(paths['ainews.stoplist'], "r")

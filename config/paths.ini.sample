@@ -25,6 +25,8 @@ whitelist = /path/to/whitelist.txt
 
 blacklist_urls = /path/to/blacklist_urls.txt
 
+blacklist_words = /path/to/blacklist_words.txt
+
 [libraries]
 
 ; (leave trailing slash)

@@ -27,7 +27,7 @@ import string
 
 import ents
 
-from AINewsConfig import config, paths
+from AINewsConfig import config, paths, blacklist_words
 from AINewsTools import savefile, loadcsv, strip_html, savepickle, loadfile, trunc
 from AINewsParser import AINewsParser
 from AINewsSourceParser import *
@@ -96,6 +96,19 @@ class AINewsCrawler:
                         content = unicode(content, errors = 'ignore')
 
                     if len(title) < 5 or len(content) < 2000: continue
+
+                    # shorten content to (presumably) ignore article comments
+                    content = trunc(content, max_pos=3000)
+
+                    # remove content with blacklisted words
+                    found_blacklist_word = False
+                    for word in blacklist_words:
+                        if re.search("\W%s\W" % word, content, re.IGNORECASE) != None:
+                            print "Found blacklisted word \"%s\", ignoring article." % word
+                            found_blacklist_word = True
+                            break
+                    if found_blacklist_word: 
+                        continue
 
                     urlid = self.put_in_db(url, pubdate, self.today, true_publisher, \
                             tag, title, content)
