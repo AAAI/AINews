@@ -173,7 +173,9 @@ class AINewsPublisher():
                 if cat_counts[cat] < max_cat_count:
                     free_cat = True
                     break
-            if free_cat:
+            # if there is a free category or this article has only the
+            # Applications category, then it can be published
+            if free_cat or (article['categories'] == ['Applications']):
                 self.published_articles.append(article)
                 self.articles[article['urlid']]['transcript'].append('Published')
                 self.articles[article['urlid']]['published'] = True
