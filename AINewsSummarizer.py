@@ -8,8 +8,12 @@
 
 from operator import itemgetter
 import nltk.data
+from subprocess import *
+import sys
+import os
 
-from AINewsConfig import stopwords
+from AINewsConfig import stopwords, paths
+from AINewsCorpus import AINewsCorpus
 
 class AINewsSummarizer:
     def __init__(self):
@@ -20,12 +24,20 @@ class AINewsSummarizer:
             content.find(s1) - content.find(s2))
         return output_sentences
 
+    def summarize_single_ots(self, article):
+        (stdout, _) = Popen("%s -r 30" % paths['tools.ots'], \
+                                shell = True, stdout=PIPE, stdin=PIPE).\
+                                communicate(input=article['content'])
+        sentences = self.sent_detector.tokenize(stdout)
+        return sentences[:4]
+
     def summarize(self, corpus, articles):
         for urlid in articles:
             articles[urlid]['summary'] = \
-                self.summarize_article(corpus, articles[urlid], 4)
+                # self.summarize_article(corpus, articles[urlid], 4)
+                self.summarize_single_ots(articles[urlid])
     
-    def summarize_article(self, corpus, article, num_sentences):
+    def summarize_article(self, corpus, article, num_sentences, joined = True):
         sorted_tfidf = sorted(article['tfidf'].iteritems(), key=itemgetter(1),
                 reverse = True)
         best_words = [corpus.wordids[pair[0]] for pair in sorted_tfidf[:10]]
@@ -52,5 +64,37 @@ class AINewsSummarizer:
         # sort the output sentences back to their original order
         output_sentences = self.reorder_sentences(output_sentences, article['content'])
 
-        # concatinate the sentences into a single string
-        return " ".join(output_sentences)
+        if joined:
+            # concatinate the sentences into a single string
+            return " ".join(output_sentences)
+        else:
+            return output_sentences
+
+    def evaluate(self, ident, inputdir):
+        corpus = AINewsCorpus()
+        (articles, _) = corpus.load_corpus(ident, 1.0, True)
+        for (urlid,_,_) in articles:
+            article = corpus.get_article(urlid, True)
+            try:
+                os.mkdir("%s/gold/%s" % (inputdir, urlid))
+            except:
+                pass
+            f = open("%s/gold/%s/%s.fulltext" % (inputdir, urlid, urlid), 'w')
+            f.write(article['content'])
+            f.write("\n")
+            f.close()
+            f = open("%s/system/ots/%s.ots.system" % (inputdir, urlid), 'w')
+            f.write("\n".join(self.summarize_single_ots(article)))
+            f.write("\n")
+            f.close()
+            f = open("%s/system/tfidf/%s.tfidf.system" % (inputdir, urlid), 'w')
+            f.write("\n".join(self.summarize_article(corpus, article, 4, False)))
+            f.write("\n")
+            f.close()
+            print "Saved %s." % urlid
+
+if __name__ == "__main__":
+    summarizer = AINewsSummarizer()
+
+    if sys.argv[1] == "evaluate":
+        summarizer.evaluate(sys.argv[2], sys.argv[3])

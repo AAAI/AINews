@@ -126,6 +126,9 @@ for dupset in duplists:
         for j in range(i+1, n):
             checklist.add(tuple([int(sortedlist[i]),int(sortedlist[j])]))
 
+print len(checklist)
+print len(idset)
+
 def recallprecision(articles):
     """
     recall and precision for simularity method, make all pairs from urllist
@@ -179,7 +182,7 @@ def recallprecision(articles):
                         #    print "false pos:", key, cutoff
                         falsepos[x] += 1
                 cutoff += 0.01
-            
+    print "pos:",pos
     best_cutoff = 0
     best_f1 = 0
     best_p = 0

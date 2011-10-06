@@ -15,7 +15,7 @@ from itertools import izip
 from AINewsConfig import config, paths
 from AINewsDB import AINewsDB
 from AINewsTextProcessor import AINewsTextProcessor
-from AINewsTools import loadpickle
+from AINewsTools import loadpickle, trunc
 
 class AINewsCorpus:
     """
@@ -63,6 +63,8 @@ class AINewsCorpus:
         rows = self.db.selectall("select parser, relevance from sources")
         for row in rows:
             self.sources[row[0].split('::')[0]] = int(row[1])
+
+        self.retained_db_docs = None
         
         self.restore_corpus()
 
@@ -103,7 +105,7 @@ class AINewsCorpus:
         distsq = 0.0
         for wordid in wordid_freq_pairs:
             tfidf = math.log(wordid_freq_pairs[wordid][0] + 1, 2) * \
-                    (math.log(self.corpus_count, 2) - \
+                    (math.log(self.corpus_count + 1, 2) - \
                     math.log(wordid_freq_pairs[wordid][1] + 1, 2))
             data[wordid] = tfidf
             distsq += tfidf * tfidf
@@ -133,31 +135,42 @@ class AINewsCorpus:
         return sim
 
     def get_article(self, urlid, corpus = False):
+        row = None
         if corpus:
             table = 'cat_corpus'
             cat_table = 'cat_corpus_cats'
+            row = self.db.selectone("""select u.url, u.title, u.content
+                from %s as u where u.urlid = %s""" % (table, urlid))
+
         else:
             table = 'urllist'
             cat_table = 'categories'
-
-        row = self.db.selectone("""select u.url, u.title, u.content, u.pubdate,
-            u.crawldate, u.processed, u.published, u.publisher from %s as u where u.urlid = %s""" % \
-            (table, urlid))
+            row = self.db.selectone("""select u.url, u.title, u.content, u.pubdate,
+                u.crawldate, u.processed, u.published, u.publisher from %s as u where u.urlid = %s""" % \
+                                        (table, urlid))
         if row != None:
             wordfreq = self.txtpro.simpletextprocess(urlid, row[2])
             processed = False
-            if row[5] == 1: processed = True
+            if not corpus and row[5] == 1: processed = True
             published = False
-            if row[6] == 1: published = True
+            if not corpus and row[6] == 1: published = True
+            pubdate = ""
+            if not corpus: pubdate = row[3]
+            crawldate = ""
+            if not corpus: crawldate = row[4]
+            publisher = ""
+            if not corpus: publisher = row[7]
             categories = []
             cat_rows = self.db.selectall("""select category from %s
                 where urlid = %s""" % (cat_table, urlid))
             for cat_row in cat_rows:
                 categories.append(cat_row[0])
             return {'urlid': urlid, 'url': row[0], 'title': row[1],
-                    'content': row[2], 'pubdate': row[3], 'crawldate': row[4],
+                    'content': trunc(row[2], max_pos=3000),
+                    'content_all': row[2],
+                    'pubdate': pubdate, 'crawldate': crawldate,
                     'processed': processed, 'published': published,
-                    'publisher': row[7],
+                    'publisher': publisher,
                     'categories': categories, 'duplicates': [],
                     'wordfreq': wordfreq, 'tfidf': self.get_tfidf(urlid, wordfreq)}
         else:
@@ -222,7 +235,7 @@ class AINewsCorpus:
             self.dftext[word] = self.wordcounts[word]
         self.wordcounts = {}
 
-    def load_corpus(self, ident, pct, debug = False):
+    def load_corpus(self, ident, pct, debug = False, retain = False):
         if debug:
             print "Loading corpus..."
         source = ident.split(':')[0]
@@ -230,7 +243,7 @@ class AINewsCorpus:
         if source == "file":
             docs = self.load_file_corpus(name, debug)
         elif source == "db":
-            docs = self.load_db_corpus(name, debug)
+            docs = self.load_db_corpus(name, debug, retain)
         print
 
         random.shuffle(docs)
@@ -294,13 +307,15 @@ class AINewsCorpus:
                 sys.stdout.flush()
         return docs
 
-    def load_db_corpus(self, name, debug = False):
+    def load_db_corpus(self, name, debug = False, retain = False):
         rows = self.db.selectall("""select c.urlid, c.content,
             group_concat(cc.category separator ' ')
             from %s as c, %s as cc
             where c.urlid = cc.urlid
             group by c.urlid order by c.urlid desc""" % (name[0], name[1]))
         print "Processing %d articles..." % len(rows)
+        if retain and self.retained_db_docs != None:
+            return self.retained_db_docs
         docs = []
         for row in rows:
             wordfreq = self.txtpro.simpletextprocess(row[0], row[1])
@@ -309,5 +324,7 @@ class AINewsCorpus:
             if debug:
                 sys.stdout.write('.')
                 sys.stdout.flush()
+        if retain:
+            self.retained_db_docs = docs
         return docs
 

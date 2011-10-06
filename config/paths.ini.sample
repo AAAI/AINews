@@ -32,6 +32,9 @@ blacklist_words = /path/to/blacklist_words.txt
 ; (leave trailing slash)
 tools = /path/to/tools/
 
+; OTS binary
+ots = /path/to/ots
+
 [templates]
 
 ; (leave trailing slash)
@@ -46,6 +49,11 @@ dir = /path/to/pmwiki/
 
 ; (leave trailing slash)
 svm_data = /path/to/svm/
+
+; this is the location of models that are actively being trained
+; and for test models (for evaluation purposes)
+; (leave trailing slash)
+svm_data_tmp = /path/to/svm_tmp/
 
 [corpus]
 
