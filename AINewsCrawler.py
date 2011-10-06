@@ -94,6 +94,8 @@ class AINewsCrawler:
                         title = unicode(title, errors = 'ignore')
                     if isinstance(content, types.StringType):
                         content = unicode(content, errors = 'ignore')
+                    content = re.sub("\\s*%s\\s*" % title, '', content)
+                    content = re.sub(r'\s*Share this\s*', '', content)
 
                     if len(title) < 5 or len(content) < 2000: continue
 

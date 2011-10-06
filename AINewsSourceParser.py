@@ -299,7 +299,7 @@ class BBCParser(AINewsParser):
         newssoup = self.soup.find('li', {'class':"DateItem leadDate"})
         date_str = newssoup.find('div',{'class':"newsDateView"}).getText()
         if date_str == "": return
-        t = time.strptime(date_str,"%d %b %Y")
+        t = time.strptime(date_str,"%d %B %Y")
         d = date(t[0], t[1], t[2])
         if d > self.today or d < self.begindate: return
         mysoups = newssoup.findAll('li',{'class': "thumbItem lead"})
