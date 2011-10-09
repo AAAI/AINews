@@ -25,16 +25,18 @@ class AINewsSummarizer:
         return output_sentences
 
     def summarize_single_ots(self, article):
-        (stdout, _) = Popen("%s -r 30" % paths['libraries.ots'], \
-                                shell = True, stdout=PIPE, stdin=PIPE).\
-                                communicate(input=article['content'])
+        f = open(paths['ainews.output'] + 'content.txt', 'w')
+        f.write(article['content'])
+        f.close()
+        (stdout, _) = Popen("%s -r 30 %s" % (paths['libraries.ots'], (paths['ainews.output'] + 'content.txt')), \
+                                shell = True, stdout=PIPE).communicate()
         sentences = self.sent_detector.tokenize(stdout)
         return sentences[:4]
 
     def summarize(self, corpus, articles):
         for urlid in articles:
             articles[urlid]['summary'] = \
-                " ".join(self.summarize_single_ots(articles[urlid]))
+                (" ".join(self.summarize_single_ots(articles[urlid]))).strip()
     
     def summarize_article(self, corpus, article, num_sentences, joined = True):
         sorted_tfidf = sorted(article['tfidf'].iteritems(), key=itemgetter(1),
