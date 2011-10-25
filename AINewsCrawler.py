@@ -84,6 +84,9 @@ class AINewsCrawler:
                         print title
                         true_publisher = re.match(r'^.* - (.+)$', title).group(1)
                         true_publisher = "%s via Google News" % true_publisher
+                    elif publisher == "UserSubmitted":
+                        true_publisher = re.match(r'^[^\/]+:\/\/([^\/]+)(?::\d+)?\/.*$', url).group(1)
+                        true_publisher = "%s (User submitted)" % true_publisher
                     else: true_publisher = publisher
 
                     # removing site title like " - NPR"
