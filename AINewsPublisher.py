@@ -45,7 +45,8 @@ class AINewsPublisher():
         self.summarizer = AINewsSummarizer()
 
         self.articles = {}
-        self.published_articles = []
+        self.publishable_articles = []
+        self.semiauto_email_output = ""
 
         self.topicids = {"AIOverview":0, "Agents":1, "Applications":2,
            "CognitiveScience":3, "Education":4,"Ethics":5, 
@@ -122,10 +123,6 @@ class AINewsPublisher():
                 self.articles[urlid]['transcript'].append(
                         'Rejected due to no selected categories')
 
-        for urlid in self.articles:
-            # update article in database
-            self.update_db(self.articles[urlid])
-
         # filter out duplicates; some articles may have 'publish' set to False
         # by this function
         self.duplicates.filter_duplicates(self.articles)
@@ -143,9 +140,12 @@ class AINewsPublisher():
             except:
                 pass
 
-        # mark each as processed
-        self.corpus.mark_processed(self.articles)
+        for urlid in self.articles:
+            # update article in database
+            self.update_db(self.articles[urlid])
 
+        # mark each as processed
+        self.corpus.mark_processed(self.articles.itervalues())
 
         # save sorted list of articles to be read by AINewsPublisher; sort by
         # duplicate count (more = better), then relevance of source,
@@ -164,9 +164,9 @@ class AINewsPublisher():
         # members and no more than max_count stories have been selected
         # (independent of category); only one of the article's categories needs
         # to have "free space"
-        self.published_articles = []
+        self.publishable_articles = []
         for article in unpublished_articles:
-            if len(self.published_articles) == max_count:
+            if len(self.publishable_articles) == max_count:
                 break
             free_cat = False
             for cat in article['categories']:
@@ -176,29 +176,45 @@ class AINewsPublisher():
             # if there is a free category or this article has only the
             # Applications category, then it can be published
             if free_cat or (article['categories'] == ['Applications']):
-                self.published_articles.append(article)
+                self.publishable_articles.append(article)
                 self.articles[article['urlid']]['transcript'].append('Published')
                 self.articles[article['urlid']]['published'] = True
                 for cat in article['categories']:
                     cat_counts[cat] += 1
 
-        # update published articles in db
-        self.corpus.mark_published(self.published_articles)
-
-        self.semiauto_email_output = ""
+        # record that these articles are publishable
+        self.corpus.mark_publishable(self.publishable_articles)
 
     def update_db(self, article):
         self.db.execute("delete from categories where urlid = %s", article['urlid'])
         for cat in article['categories']:
             self.db.execute("insert into categories values (%s,%s)",
                 (article['urlid'], cat))
+        self.db.execute("update urllist set summary = %s where urlid = %s",
+                        (article['summary'], article['urlid']))
+
+    def get_publishable_articles(self):
+        publishable = self.corpus.get_publishable()
+
+        self.publishable_articles = []
+
+        # drop "Applications" category if article has more categories
+        for article in publishable:
+            if len(article['categories']) > 1:
+                article['categories'] = filter(lambda c: c != "Applications",
+                                               article['categories'])
+            self.publishable_articles.append(article)
+
+
+    def mark_published(self):
+        self.corpus.mark_published(self.publishable_articles)
 
     def generate_standard_output(self): 
         """
         Generate the stanard output for debuging on screen.
         """
         txt = LatestNewsTxt()
-        txt.news = self.published_articles
+        txt.news = self.publishable_articles
         savefile(paths['ainews.output'] + "std_output.txt", str(txt))
 
     def generate_email_output(self):
@@ -208,28 +224,15 @@ class AINewsPublisher():
         email = LatestNewsEmail()
         email.date = self.today.strftime("%B %d, %Y")
         email.year = self.today.strftime("%Y")
-        email.news = self.published_articles
+        email.news = self.publishable_articles
         email.aitopic_urls = aitopic_urls
         email.topicids = self.topicids
         email_output = str(email)
 
         savefile(paths['ainews.output'] + "email_output.txt", email_output)
         self.semiauto_email_output = email_output
-        
-    def generate_pmwiki_output(self):
-        """
-        Genereate the output with PmWiki page format. It needs to be further
-        processed by AINewsPmwiki.php.
-        """
-        pmwiki = LatestNewsPmWiki()
-        pmwiki.date = self.today.strftime("%B %d, %Y")
-        pmwiki.year = self.today.strftime("%Y")
-        pmwiki.news = self.published_articles
-        pmwiki.rater = True
-        savefile(paths['ainews.output'] + "pmwiki_output.txt", str(pmwiki))
-        pmwiki.rater = False
-        savefile(paths['ainews.output'] + "pmwiki_output_norater.txt", str(pmwiki))
 
+    def generate_pmwiki_all_output(self):
         pmwiki_all = AllNewsPmWiki()
         pmwiki_all.date = self.today.strftime("%B %d, %Y")
         pmwiki_all.year = self.today.strftime("%Y")
@@ -247,7 +250,20 @@ class AINewsPublisher():
             savefile(paths['ainews.output'] + "aiarticles/%d" % urlid,
                     str(article_wiki))
         savefile(paths['ainews.output'] + "urlids_output.txt", urlids_output)
-
+        
+    def generate_pmwiki_published_output(self):
+        """
+        Genereate the output with PmWiki page format. It needs to be further
+        processed by AINewsPmwiki.php.
+        """
+        pmwiki = LatestNewsPmWiki()
+        pmwiki.date = self.today.strftime("%B %d, %Y")
+        pmwiki.year = self.today.strftime("%Y")
+        pmwiki.news = self.publishable_articles
+        pmwiki.rater = True
+        savefile(paths['ainews.output'] + "pmwiki_output.txt", str(pmwiki))
+        pmwiki.rater = False
+        savefile(paths['ainews.output'] + "pmwiki_output_norater.txt", str(pmwiki))
 
     def publish_email(self):
         """
@@ -296,7 +312,7 @@ class AINewsPublisher():
     def update_rss(self):
         rssitems = []
         # insert latest news into rssitems
-        for article in self.published_articles:
+        for article in self.publishable_articles:
             rssitems.append(PyRSS2Gen.RSSItem(
                 title = article['title'],
                 link = article['url'],
@@ -316,7 +332,7 @@ class AINewsPublisher():
         for i in range(len(topicrsses)):
             topicitems.append([])
         urlset = set()
-        for article in self.published_articles:
+        for article in self.publishable_articles:
             if article['url'] in urlset: continue
             urlset.add(article['url'])
             for cat in article['categories']:

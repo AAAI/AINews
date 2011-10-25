@@ -52,15 +52,21 @@ def train():
     svm.train_all()
     svm.train_isrelated()
 
-def publish():
+def prepare():
     publisher = AINewsPublisher()
     publisher.filter_and_process()
+    publisher.generate_pmwiki_all_output()
+
+def publish():
+    publisher = AINewsPublisher()
+    publisher.get_publishable_articles()
     publisher.generate_standard_output()
     publisher.generate_email_output()
-    publisher.generate_pmwiki_output()
+    publisher.generate_pmwiki_published_output()
     publisher.publish_email()
     publisher.publish_pmwiki()
     publisher.update_rss()
+    publisher.mark_published()
 
 def main():
     """
@@ -69,7 +75,7 @@ def main():
     # Set en_US, UTF8
     locale.setlocale(locale.LC_ALL,'en_US.UTF-8')
 
-    commands_list = ("train", "crawl", "publish", "help")
+    commands_list = ("train", "crawl", "prepare", "publish", "help")
     try:
         if len(sys.argv) < 2 or sys.argv[1] not in commands_list:
             usage()
@@ -87,6 +93,9 @@ def main():
 
     elif command == "crawl":
         crawl(opts)
+
+    elif command == "prepare":
+        prepare()
 
     elif command == "publish":
         publish()

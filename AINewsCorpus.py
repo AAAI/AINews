@@ -145,21 +145,24 @@ class AINewsCorpus:
         else:
             table = 'urllist'
             cat_table = 'categories'
-            row = self.db.selectone("""select u.url, u.title, u.content, u.pubdate,
-                u.crawldate, u.processed, u.published, u.publisher from %s as u where u.urlid = %s""" % \
+            row = self.db.selectone("""select u.url, u.title, u.content, u.summary, 
+                u.pubdate, u.crawldate, u.processed, u.published, u.publisher
+                from %s as u where u.urlid = %s""" % \
                                         (table, urlid))
         if row != None:
             wordfreq = self.txtpro.simpletextprocess(urlid, row[2])
+            summary = ""
+            if not corpus: summary = row[3]
             processed = False
-            if not corpus and row[5] == 1: processed = True
+            if not corpus and row[6] == 1: processed = True
             published = False
-            if not corpus and row[6] == 1: published = True
+            if not corpus and row[7] == 1: published = True
             pubdate = ""
-            if not corpus: pubdate = row[3]
+            if not corpus: pubdate = row[4]
             crawldate = ""
-            if not corpus: crawldate = row[4]
+            if not corpus: crawldate = row[5]
             publisher = ""
-            if not corpus: publisher = row[7]
+            if not corpus: publisher = row[8]
             categories = []
             cat_rows = self.db.selectall("""select category from %s
                 where urlid = %s""" % (cat_table, urlid))
@@ -168,6 +171,7 @@ class AINewsCorpus:
             return {'urlid': urlid, 'url': row[0], 'title': row[1],
                     'content': trunc(row[2], max_pos=3000),
                     'content_all': row[2],
+                    'summary': summary,
                     'pubdate': pubdate, 'crawldate': crawldate,
                     'processed': processed, 'published': published,
                     'publisher': publisher,
@@ -199,15 +203,28 @@ class AINewsCorpus:
             articles[row[0]] = self.get_article(row[0])
         return articles
 
+    def get_publishable(self):
+        articles = []
+        rows = self.db.selectall("select urlid from urllist where "
+                                 "publishable = 1 and published = 0")
+        for row in rows:
+            articles.append(self.get_article(row[0]))
+        return articles
+
     def mark_processed(self, articles):
-        for urlid in articles:
+        for article in articles:
             self.db.execute("update urllist set processed = 1 where urlid = %s",
-                    urlid)
+                    article['urlid'])
+
+    def mark_publishable(self, articles):
+        for article in articles:
+            self.db.execute("update urllist set publishable = 1 where urlid = %s",
+                            article['urlid'])
 
     def mark_published(self, articles):
         for article in articles:
             self.db.execute("update urllist set published = 1 where urlid = %s",
-                    article['urlid'])
+                            article['urlid'])
 
     def restore_corpus(self):
         self.wordids = {}
