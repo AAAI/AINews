@@ -76,8 +76,14 @@ class AINewsCorpus:
     def compare_articles(self, article1, article2):
         dupcount1 = len(article1['duplicates'])
         dupcount2 = len(article2['duplicates'])
-        relevance1 = self.get_relevance(article1['publisher'])
-        relevance2 = self.get_relevance(article2['publisher'])
+        if article1['publisher'].find('User submitted') != -1:
+            relevance1 = 200
+        else:
+            relevance1 = self.get_relevance(article1['publisher'])
+        if article2['publisher'].find('User submitted') != -1:
+            relevance2 = 200
+        else:
+            relevance2 = self.get_relevance(article2['publisher'])
         cat_count1 = len(article1['categories'])
         cat_count2 = len(article2['categories'])
         if cmp(dupcount1, dupcount2) == 0:
