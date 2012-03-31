@@ -212,7 +212,7 @@ class AINewsCorpus:
     def get_publishable(self):
         articles = []
         rows = self.db.selectall("select urlid from urllist where "
-                                 "publishable = 1 and published = 0")
+                        "publishable = 1 and published = 0 and pubdate != '0000-00-00'")
         for row in rows:
             articles.append(self.get_article(row[0]))
         return articles

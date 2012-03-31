@@ -29,7 +29,8 @@ class AINewsDB:
                                         passwd = pwd,
                                         db = database,
                                         charset = 'utf8',
-                                        use_unicode = True)
+                                        use_unicode = True,
+                                        connect_timeout = 120)
         except MySQLdb.Error, e:
             print "Error %d: %s" % (e.args[0], e.args[1])
             sys.exit (1)

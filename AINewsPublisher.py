@@ -72,7 +72,7 @@ class AINewsPublisher():
                 # give a meaningful pubdate so that other code doesn't crash
                 self.articles[urlid]['pubdate'] = self.today
                 self.articles[urlid]['publish'] = False
-                self.articles[urlid]['transcript'] = "Rejected due to bogus publication date."
+                self.articles[urlid]['transcript'].append("Rejected due to bogus publication date.")
             elif self.articles[urlid]['pubdate'] < self.earliest_date:
                 self.articles[urlid]['publish'] = False
                 self.articles[urlid]['transcript'].append(

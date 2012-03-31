@@ -127,6 +127,10 @@ class UserSubmittedParser(AINewsParser):
             date_str = self.extract_genenraltext(soup.find('date'))
             pub_date = self.extract_date(date_str)
 
+            earliest_date = date.today() - timedelta(days = int(config['ainews.period']))
+            if pub_date is None or pub_date < earliest_date:
+                continue
+
             print "Checking if user-submitted URL exists:", url
             res = self.parse_url(url)
             if not res or self.url == None:

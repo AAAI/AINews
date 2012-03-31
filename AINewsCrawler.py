@@ -51,7 +51,7 @@ class AINewsCrawler:
         Get the news source list.
         """
         sources = []
-        sql = "select url,parser,description from sources where status = 1 order by id desc"
+        sql = "select url,parser,description from sources where status = 1 order by id asc"
         rows = self.db.selectall(sql)
         for row in rows:
             items = row[1].split('::')
@@ -85,7 +85,7 @@ class AINewsCrawler:
                         true_publisher = re.match(r'^.* - (.+)$', title).group(1)
                         true_publisher = "%s via Google News" % true_publisher
                     elif publisher == "UserSubmitted":
-                        true_publisher = re.match(r'^[^\/]+:\/\/([^\/]+)(?::\d+)?\/.*$', url).group(1)
+                        true_publisher = re.match(r'^[^\/]+:\/\/([^\/]+)(?::\d+)?\/?.*$', url).group(1)
                         true_publisher = "%s (User submitted)" % true_publisher
                     else: true_publisher = publisher
 
@@ -97,12 +97,14 @@ class AINewsCrawler:
                         title = unicode(title, errors = 'ignore')
                     if isinstance(content, types.StringType):
                         content = unicode(content, errors = 'ignore')
-                    content = re.sub("\\s*%s\\s*" % title, '', content)
+                    content = re.sub("\\s*%s\\s*" % re.escape(title), '', content)
                     content = re.sub(r'\s*Share this\s*', '', content)
                     content = re.sub(r'\s+,\s+', ', ', content)
                     content = re.sub(r'\s+\.', '.', content)
 
-                    if len(title) < 5 or len(content) < 2000: continue
+                    if len(title) < 5 or len(content) < 2000:
+                        print "Content or title too short"
+                        continue
 
                     # shorten content to (presumably) ignore article comments
                     content = trunc(content, max_pos=3000)
