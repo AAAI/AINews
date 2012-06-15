@@ -76,8 +76,14 @@ class AINewsCorpus:
     def compare_articles(self, article1, article2):
         dupcount1 = len(article1['duplicates'])
         dupcount2 = len(article2['duplicates'])
-        relevance1 = self.get_relevance(article1['publisher'])
-        relevance2 = self.get_relevance(article2['publisher'])
+        if article1['publisher'].find('User submitted') != -1:
+            relevance1 = 200
+        else:
+            relevance1 = self.get_relevance(article1['publisher'])
+        if article2['publisher'].find('User submitted') != -1:
+            relevance2 = 200
+        else:
+            relevance2 = self.get_relevance(article2['publisher'])
         cat_count1 = len(article1['categories'])
         cat_count2 = len(article2['categories'])
         if cmp(dupcount1, dupcount2) == 0:
@@ -208,7 +214,7 @@ class AINewsCorpus:
     def get_publishable(self):
         articles = []
         rows = self.db.selectall("select urlid from urllist where "
-                                 "publishable = 1 and published = 0")
+                        "publishable = 1 and published = 0 and pubdate != '0000-00-00'")
         for row in rows:
             articles.append(self.get_article(row[0]))
         return articles
