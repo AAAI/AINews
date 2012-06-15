@@ -18,8 +18,6 @@ from AINewsTools import loadfile, savepickle
 class AINewsSVMClassifier:
     def __init__(self):
         self.corpus = AINewsCorpus()
-        self.categories = self.corpus.categories
-        #self.categories.append('NotRelated')
 
     def predict(self, articles):
         urlids = sorted(articles.keys())
@@ -29,7 +27,7 @@ class AINewsSVMClassifier:
         # produce the test input file
         f = open(paths['svm.svm_data']+'predict', 'w')
         for urlid in urlids:
-            for cat in self.categories:
+            for cat in self.corpus.categories:
                 articles[urlid]['cat_probs'] = {}
             tfidf = self.corpus.get_tfidf(urlid, articles[urlid]['wordfreq'])
             f.write("+1 ")
@@ -39,7 +37,7 @@ class AINewsSVMClassifier:
         f.close()
 
         # predict each category plus NotRelated
-        for cat in self.categories:
+        for cat in self.corpus.categories:
             cmd = 'svm-scale -r "%s" "%s" > "%s"' % \
                 (paths['svm.svm_data']+cat+'.range', \
                 paths['svm.svm_data']+'predict', \
@@ -77,7 +75,7 @@ class AINewsSVMClassifier:
         self.libsvm_train(False)
 
     def evaluate(self, ident, pct):
-        for i in range(5):
+        for i in range(1):
             results = {}
             (train_corpus, predict_corpus) = self.corpus.load_corpus(ident, float(pct), True, True)
             savepickle(paths['svm.svm_data_tmp']+'wordids.pkl', self.corpus.wordids)
@@ -91,19 +89,19 @@ class AINewsSVMClassifier:
     def generate_libsvm_input(self, corpus, suffix):
         train_labels = {}
         train_samples = {}
-        for cat in self.categories:
+        for cat in self.corpus.categories:
             train_labels[cat] = []
             train_samples[cat] = []
         for c in corpus:
             cats = c[2].split(' ')
-            for cat in self.categories:
+            for cat in self.corpus.categories:
                 train_samples[cat].append(self.corpus.get_tfidf(c[0], c[1]))
                 if cat in cats:
                     train_labels[cat].append("+1")
                 else:
                     train_labels[cat].append("-1")
 
-        for cat in self.categories:
+        for cat in self.corpus.categories:
             # do feature selection
             whole_fsc_dict,whole_imp_v = cal_feat_imp(train_labels[cat], train_samples[cat])
             # choose top 9000 features
@@ -121,7 +119,7 @@ class AINewsSVMClassifier:
     def libsvm_train(self, alsotest):
         results = {}
         # train each category plus NotRelated
-        for cat in self.categories:
+        for cat in self.corpus.categories:
             if alsotest:
                 sys.stdout.write("Training and testing " + cat + "... ")
             else:

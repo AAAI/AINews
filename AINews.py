@@ -43,7 +43,7 @@ def usage():
     
 def crawl(opts):
     crawler = AINewsCrawler()
-    crawler.crawl()
+    crawler.crawl(opts)
 
 def train():
     svm = AINewsSVM()
@@ -81,7 +81,7 @@ def main():
             usage()
             sys.exit()
         command = sys.argv[1]
-        opts, args = getopt.getopt(sys.argv[2:], 'rf:u:', ['url=', 'file=', 'rss'])
+        opts, args = getopt.getopt(sys.argv[2:], 'rf:u:s:', ['url=', 'file=', 'rss', 'source='])
     except getopt.GetoptError, err:
         # print help information and exit:
         print str(err) # will print something like "option -a not recognized"

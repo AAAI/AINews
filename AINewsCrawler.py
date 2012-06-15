@@ -46,23 +46,28 @@ class AINewsCrawler:
         self.db = AINewsDB()
         self.parser = AINewsParser()
 
-    def get_newssources(self):
+    def get_newssources(self, opts):
         """
         Get the news source list.
         """
         sources = []
-        sql = "select url,parser,description from sources where status = 1 order by id desc"
+        where = "1=1"
+        for opt in opts:
+            if opt[0] == "-s" or opt[0] == "--source":
+                where = "id = %s" % opt[1]
+        
+        sql = "select url,parser,description from sources where status = 1 and %s order by id asc" % where
         rows = self.db.selectall(sql)
         for row in rows:
             items = row[1].split('::')
             sources.append((row[0], items[0], items[1], row[2]))
         return sources
 
-    def crawl(self):
+    def crawl(self, opts):
         """
         Crawl the news by source lists (Search page or RSS).
         """
-        rows = self.get_newssources()
+        rows = self.get_newssources(opts)
         for row in rows:
             sourcepage_url = row[0]
             publisher = row[1]

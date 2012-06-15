@@ -149,7 +149,7 @@ class AINewsCorpus:
                 u.pubdate, u.crawldate, u.processed, u.published, u.publisher
                 from %s as u where u.urlid = %s""" % \
                                         (table, urlid))
-        if row != None:
+        if row != None and row[2] is not None:
             wordfreq = self.txtpro.simpletextprocess(urlid, row[2])
             summary = ""
             if not corpus: summary = row[3]
@@ -188,12 +188,14 @@ class AINewsCorpus:
             articles[row[0]] = self.get_article(row[0])
         return articles
 
-    def get_articles_idrange(self, urlid_start, urlid_end):
+    def get_articles_idrange(self, urlid_start, urlid_end, corpus = False):
         articles = {}
         rows = self.db.selectall("""select urlid from urllist
             where urlid >= %s and urlid <= %s""", (urlid_start, urlid_end))
         for row in rows:
-            articles[row[0]] = self.get_article(row[0])
+            art = self.get_article(row[0], corpus)
+            if art is not None:
+                articles[row[0]] = art
         return articles
 
     def get_unprocessed(self):
@@ -207,6 +209,13 @@ class AINewsCorpus:
         articles = []
         rows = self.db.selectall("select urlid from urllist where "
                                  "publishable = 1 and published = 0")
+        for row in rows:
+            articles.append(self.get_article(row[0]))
+        return articles
+
+    def get_published(self):
+        articles = []
+        rows = self.db.selectall("select urlid from urllist where published = 1")
         for row in rows:
             articles.append(self.get_article(row[0]))
         return articles
@@ -261,7 +270,7 @@ class AINewsCorpus:
             docs = self.load_file_corpus(name, debug)
         elif source == "db":
             docs = self.load_db_corpus(name, debug, retain)
-        print
+        if debug: print
 
         random.shuffle(docs)
         offset = int(len(docs)*pct)
@@ -284,6 +293,9 @@ class AINewsCorpus:
         self.cache_urls = {}
         for c in train_corpus:
             self.add_freq_index(c[0], c[1], c[2].split())
+            if debug:
+                sys.stdout.write('.')
+                sys.stdout.flush()
         self.commit_freq_index('wordlist_eval')
 
         return (train_corpus, predict_corpus)
@@ -330,13 +342,13 @@ class AINewsCorpus:
             from %s as c, %s as cc
             where c.urlid = cc.urlid
             group by c.urlid order by c.urlid desc""" % (name[0], name[1]))
-        print "Processing %d articles..." % len(rows)
+        if debug: print "Processing %d articles..." % len(rows)
         if retain and self.retained_db_docs != None:
             return self.retained_db_docs
         docs = []
         for row in rows:
             wordfreq = self.txtpro.simpletextprocess(row[0], row[1])
-            if wordfreq.N() > 0:
+            if wordfreq.N() > 0 and 'NotRelated' not in row[2].split(' '):
                 docs.append((row[0], wordfreq, row[2]))
             if debug:
                 sys.stdout.write('.')
