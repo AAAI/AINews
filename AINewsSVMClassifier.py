@@ -130,7 +130,7 @@ class AINewsSVMClassifier:
                     (paths['svm.svm_data_tmp']+cat+'-train',
                      paths['svm.svm_data_tmp']+cat+'-predict')
             else:
-                cmd = 'python svm-easy.py "%s"' % (paths['svm.svm_data_tmp']+cat)
+                cmd = 'python svm-easy.py "%s"' % (paths['svm.svm_data_tmp']+cat+'-train')
             (stdout, _) = Popen(cmd, shell = True, stdout=PIPE).communicate()
             if alsotest:
                 m = re.match('.*Accuracy = (\d+).*', re.sub('\n', '', stdout))

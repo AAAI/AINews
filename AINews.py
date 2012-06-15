@@ -14,6 +14,7 @@ import locale
 from AINewsConfig import config, paths
 from AINewsCrawler import AINewsCrawler
 from AINewsPublisher import AINewsPublisher
+from AINewsSVMClassifier import AINewsSVMClassifier
 
 def usage():
     """
@@ -46,11 +47,8 @@ def crawl(opts):
     crawler.crawl(opts)
 
 def train():
-    svm = AINewsSVM()
-    svm.collect_feedback()
-    svm.load_news_words()
-    svm.train_all()
-    svm.train_isrelated()
+    svm = AINewsSVMClassifier()
+    svm.train('db:cat_corpus:cat_corpus_cats')
 
 def prepare():
     publisher = AINewsPublisher()
