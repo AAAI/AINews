@@ -102,7 +102,7 @@ class AINewsCrawler:
                     content = re.sub(r'\s+,\s+', ', ', content)
                     content = re.sub(r'\s+\.', '.', content)
 
-                    if len(title) < 5 or len(content) < 2000:
+                    if len(title) < 5 or len(content) < 1000:
                         print "Content or title too short"
                         continue
 
