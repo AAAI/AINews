@@ -14,6 +14,7 @@ import locale
 from AINewsConfig import config, paths
 from AINewsCrawler import AINewsCrawler
 from AINewsPublisher import AINewsPublisher
+from AINewsSVMClassifier import AINewsSVMClassifier
 
 def usage():
     """
@@ -43,14 +44,11 @@ def usage():
     
 def crawl(opts):
     crawler = AINewsCrawler()
-    crawler.crawl()
+    crawler.crawl(opts)
 
 def train():
-    svm = AINewsSVM()
-    svm.collect_feedback()
-    svm.load_news_words()
-    svm.train_all()
-    svm.train_isrelated()
+    svm = AINewsSVMClassifier()
+    svm.train('db:cat_corpus:cat_corpus_cats')
 
 def prepare():
     publisher = AINewsPublisher()
@@ -81,7 +79,7 @@ def main():
             usage()
             sys.exit()
         command = sys.argv[1]
-        opts, args = getopt.getopt(sys.argv[2:], 'rf:u:', ['url=', 'file=', 'rss'])
+        opts, args = getopt.getopt(sys.argv[2:], 'rf:u:s:', ['url=', 'file=', 'rss', 'source='])
     except getopt.GetoptError, err:
         # print help information and exit:
         print str(err) # will print something like "option -a not recognized"

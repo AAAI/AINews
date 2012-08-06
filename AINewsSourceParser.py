@@ -100,6 +100,8 @@ def ParserFactory(publisher, type):
         parser = ScienceDailyRSSParser()
     elif publisher == "IEEE Spectrum" and type == 'rss':
         parser = IEEESpectrumRSSParser()
+    elif publisher == "Curata" and type == 'rss':
+        parser = CurataRSSParser()
     else:
         parser = None
     return parser
@@ -1148,8 +1150,8 @@ class NYTRSSParser(AINewsParser):
     def parse_sourcepage(self, rss_url):
         f = feedparser.parse(rss_url)
         for entry in f.entries:
-            d = date(entry.date_parsed[0], \
-                           entry.date_parsed[1], entry.date_parsed[2])
+            d = date(entry.published_parsed[0], \
+                           entry.published_parsed[1], entry.published_parsed[2])
             if d > self.today or d < self.begindate: continue
             url = entry.link[:-23]
             title = entry.title
@@ -1187,8 +1189,8 @@ class PopularScienceRSSParser(AINewsParser):
     def parse_sourcepage(self, rss_url):
         f = feedparser.parse(rss_url)
         for entry in f.entries:
-            d = date(entry.date_parsed[0], \
-                           entry.date_parsed[1], entry.date_parsed[2])
+            d = date(entry.published_parsed[0], \
+                           entry.published_parsed[1], entry.published_parsed[2])
             if d > self.today or d < self.begindate: continue
             """
             # pop sci has the longest description text
@@ -1251,8 +1253,8 @@ class CNNRSSParser(AINewsParser):
     def parse_sourcepage(self, rss_url):
         f = feedparser.parse(rss_url)
         for entry in f.entries:
-            d = date(entry.date_parsed[0], \
-                           entry.date_parsed[1], entry.date_parsed[2])
+            d = date(entry.published_parsed[0], \
+                           entry.published_parsed[1], entry.published_parsed[2])
             if d > self.today or d < self.begindate: continue
             
             """
@@ -1309,8 +1311,8 @@ class MITNewsRSSParser(AINewsParser):
     def parse_sourcepage(self, rss_url):
         f = feedparser.parse(rss_url)
         for entry in f.entries:
-            d = date(entry.date_parsed[0], \
-                           entry.date_parsed[1], entry.date_parsed[2])
+            d = date(entry.published_parsed[0], \
+                           entry.published_parsed[1], entry.published_parsed[2])
             if d > self.today or d < self.begindate: continue
             try:
                 descsoup = BeautifulSoup(entry.description)
@@ -1344,8 +1346,8 @@ class WiredRSSParser(AINewsParser):
             if self.debug: print >> sys.stderr, "feedparser ERROR: %s" % error
             return False            
         for entry in f.entries:
-            d = date(entry.date_parsed[0], \
-                           entry.date_parsed[1], entry.date_parsed[2])
+            d = date(entry.published_parsed[0], \
+                           entry.published_parsed[1], entry.published_parsed[2])
             if d > self.today or d < self.begindate: continue
             url = entry.link
             title = entry.title
@@ -1385,8 +1387,8 @@ class WashPostRSSParser(AINewsParser):
     def parse_sourcepage(self, rss_url):
         f = feedparser.parse(rss_url)
         for entry in f.entries:
-            d = date(entry.date_parsed[0], \
-                    entry.date_parsed[1], entry.date_parsed[2])
+            d = date(entry.published_parsed[0], \
+                    entry.published_parsed[1], entry.published_parsed[2])
             if d > self.today or d < self.begindate: continue
             
             url = entry.link
@@ -1433,8 +1435,8 @@ class NewScientistRSSParser(AINewsParser):
     def parse_sourcepage(self, rss_url):
         f = feedparser.parse(rss_url)
         for entry in f.entries:
-            d = date(entry.date_parsed[0], \
-                    entry.date_parsed[1], entry.date_parsed[2])
+            d = date(entry.published_parsed[0], \
+                    entry.published_parsed[1], entry.published_parsed[2])
             if d > self.today or d < self.begindate: continue
             
             url = entry.link
@@ -1472,8 +1474,8 @@ class ZDNetRSSParser(AINewsParser):
     def parse_sourcepage(self, rss_url):
         f = feedparser.parse(rss_url)
         for entry in f.entries:
-            d = date(entry.date_parsed[0], \
-                    entry.date_parsed[1], entry.date_parsed[2])
+            d = date(entry.published_parsed[0], \
+                    entry.published_parsed[1], entry.published_parsed[2])
             if d > self.today or d < self.begindate: continue
             
             url = entry.link
@@ -1521,8 +1523,8 @@ class KurzweilaiRSSParser(AINewsParser):
             print >> sys.stderr, "feedparser error in KurzweilaiRSSParser"
             return
         for entry in f.entries:
-            d = date(entry.date_parsed[0], \
-                    entry.date_parsed[1], entry.date_parsed[2])
+            d = date(entry.published_parsed[0], \
+                    entry.published_parsed[1], entry.published_parsed[2])
             if d > self.today or d < self.begindate: continue
             
             try:
@@ -1575,8 +1577,8 @@ class USATodayRSSParser(AINewsParser):
     def parse_sourcepage(self, rss_url):
         f = feedparser.parse(rss_url)
         for entry in f.entries:
-            d = date(entry.date_parsed[0], \
-                    entry.date_parsed[1], entry.date_parsed[2])
+            d = date(entry.published_parsed[0], \
+                    entry.published_parsed[1], entry.published_parsed[2])
             if d > self.today or d < self.begindate: continue
             
             url = entry.link
@@ -1630,8 +1632,8 @@ class EngadgetRSSParser(AINewsParser):
     def parse_sourcepage(self, rss_url):
         f = feedparser.parse(rss_url)
         for entry in f.entries:
-            d = date(entry.date_parsed[0], \
-                    entry.date_parsed[1], entry.date_parsed[2])
+            d = date(entry.published_parsed[0], \
+                    entry.published_parsed[1], entry.published_parsed[2])
             if d > self.today or d < self.begindate: continue
             
             url = entry.link
@@ -1671,8 +1673,8 @@ class LATimesRSSParser(AINewsParser):
     def parse_sourcepage(self, rss_url):
         f = feedparser.parse(rss_url)
         for entry in f.entries:
-            d = date(entry.date_parsed[0], \
-                    entry.date_parsed[1], entry.date_parsed[2])
+            d = date(entry.published_parsed[0], \
+                    entry.published_parsed[1], entry.published_parsed[2])
             if d > self.today or d < self.begindate: continue
             
             try:
@@ -1703,8 +1705,8 @@ class RobotNetRSSParser(AINewsParser):
     def parse_sourcepage(self, rss_url):
         f = feedparser.parse(rss_url)
         for entry in f.entries:
-            d = date(entry.date_parsed[0], \
-                    entry.date_parsed[1], entry.date_parsed[2])
+            d = date(entry.published_parsed[0], \
+                    entry.published_parsed[1], entry.published_parsed[2])
             if d > self.today or d < self.begindate: continue
             
             url = entry.link
@@ -1745,8 +1747,8 @@ class GoogleNewsRSSParser(AINewsParser):
     def parse_sourcepage(self, rss_url):
         f = feedparser.parse(rss_url)
         for entry in f.entries:
-            d = date(entry.date_parsed[0], \
-                           entry.date_parsed[1], entry.date_parsed[2])
+            d = date(entry.published_parsed[0], \
+                           entry.published_parsed[1], entry.published_parsed[2])
             if d > self.today or d < self.begindate: continue
             if entry.title[-6:] == '(blog)' \
                 or entry.title[-15:] == '(press release)': continue
@@ -1772,8 +1774,8 @@ class ScienceDailyRSSParser(AINewsParser):
     def parse_sourcepage(self, rss_url):
         f = feedparser.parse(rss_url)
         for entry in f.entries:
-            d = date(entry.date_parsed[0], \
-                    entry.date_parsed[1], entry.date_parsed[2])
+            d = date(entry.published_parsed[0], \
+                    entry.published_parsed[1], entry.published_parsed[2])
             if d > self.today or d < self.begindate: continue
             
             url = entry.link
@@ -1859,3 +1861,45 @@ class IEEESpectrumRSSParser(AINewsParser):
             text = re.sub(r'&.*?;', ' ', text)
             self.candidates[i].append(text)
   
+class CurataRSSParser(AINewsParser):
+    """
+    RSS parser for Curata
+    e.g. http://ai.curatasite.com/api/v1/articles.rss
+    """
+    def parse_sourcepage(self, rss_url):
+        f = feedparser.parse(rss_url)
+        for entry in f.entries:
+            d = date(entry.published_parsed[0], \
+                    entry.published_parsed[1], entry.published_parsed[2])
+            #if d > self.today or d < self.begindate: continue
+            
+            url = entry.link
+            title = entry.title
+            self.candidates.append([url, title, d])
+                
+    def parse_storypage(self):
+        for i, candidate in enumerate(self.candidates):
+            res = self.parse_url(candidate[0])
+            if not res or self.url == None:
+                continue
+            m = re.search('(http://ai.curatasite.com/articles/share/\d+/)', self.html, re.MULTILINE)
+            if m:
+                second_url = m.group(1)
+            else:
+                continue
+
+            res = self.parse_url(second_url)
+            if not res or self.url == None or self.db.isindexed(self.url):
+                continue
+            m = re.search('window.location.href = "(.*?)";', self.html, re.MULTILINE)
+            if m:
+                real_url = m.group(1)
+            else:
+                continue
+
+            res = self.parse_url(real_url)
+            if not res or self.url == None or self.db.isindexed(self.url):
+                continue
+            text = self.justext_extract(self.html)
+            if len(text) == 0: continue
+            self.candidates[i].append(text)
