@@ -7,10 +7,10 @@
 # notice is included.
 
 from operator import itemgetter
-import nltk.data
 from subprocess import *
 import sys
 import os
+import nltk
 
 from AINewsConfig import stopwords, paths
 

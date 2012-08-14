@@ -61,6 +61,9 @@ class AINewsPublisher():
 
         if len(self.articles) == 0: return
 
+        for urlid in self.articles:
+            print "Considering", urlid
+
         # assume every article will be published; may be set to False from one
         # of the filtering processes below
         for urlid in self.articles:
@@ -300,6 +303,10 @@ class AINewsPublisher():
         """
         semiauto = """
         <html>
+        <head>
+        <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+        <META HTTP-EQUIV="Expires" CONTENT="-1">
+        </head>
         <body>
         <h1>AI Alert - SemiAuto Sender</h1>
         <form action="http://aaai.org/cgi-dada/mail.cgi?flavor=send_email" method='post'>
@@ -317,6 +324,10 @@ class AINewsPublisher():
         %s
         </p>
         </body>
+        <head>
+        <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+        <META HTTP-EQUIV="Expires" CONTENT="-1">
+        </head>
         </html>
         """ % ("AI Alert - "+str(self.today.strftime("%B %d, %Y")),
                self.semiauto_email_output, self.semiauto_email_output)

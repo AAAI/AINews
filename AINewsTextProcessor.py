@@ -16,9 +16,8 @@ in the default configuration.
 """
 
 import re
-import nltk
 import types
-from nltk.corpus import wordnet as wn
+import nltk
 from AINewsConfig import config, stopwords, whitelist
 
 class AINewsTextProcessor:
@@ -111,95 +110,6 @@ class AINewsTextProcessor:
         self.cache[urlid] = nltk.FreqDist(words)
         return self.cache[urlid]
         
-    def textprocess(self, raw, onlyNOUN = True):
-        """
-        My re-implementation of the preprocess by utilizing PoS tag. It combines
-        both Name Entity and Unigrams into the same frequency distribution.
-        @param raw: the raw text to be processed.
-        @type raw: C{string}
-        @param onlyNOUN: only measure name entity and nouns in the raw text
-        @type onlyNOUN: C{boolean}
-        """
-        NN_words = []
-        VB_words = []
-        JJ_words = []
-        NE_words = []
-        
-        sentences = nltk.sent_tokenize(raw)
-        sentences = [nltk.word_tokenize(sent) for sent in sentences]
-        sentences = [nltk.pos_tag(sent) for sent in sentences]
-        self.tagged_sentences = [nltk.ne_chunk(sent, binary=True) \
-                                    for sent in sentences]
-        for tagged_sent in self.tagged_sentences:
-            if self.debug: pass #print tagged_sent
-            for tagged_token in tagged_sent:
-                if type(tagged_token[0]) == types.TupleType :
-                    name_entity = ""
-                    for i in range(len(tagged_token)):
-                        name_entity += tagged_token[i][0] + ' '
-                    if len(name_entity) > 3 and len(name_entity) <= 7:
-                        NE_words.append(name_entity[:-1])
-                else:
-                    pos = tagged_token[1][:2]
-                    if pos == 'NN':
-                        NN_words.append(tagged_token[0])
-                    elif pos == 'VB':
-                        VB_words.append(tagged_token[0])
-                    elif pos == 'JJ':
-                        JJ_words.append(tagged_token[0])
-          
-        NN_words = self.__pos_morphy(NN_words, wn.NOUN)
-        if onlyNOUN == True:
-            unigram_words = [w.lower() for w in NN_words \
-                            if len(w)>2 and w.find('\'') == -1
-                                and w.lower() not in stopwords
-                                and not w.isdigit()]
-        else:
-            VB_words = self.__pos_morphy(VB_words, wn.VERB)
-            JJ_words = self.__pos_morphy(JJ_words, wn.ADJ)
-            unigram_words = [w.lower() for w in NN_words + VB_words + JJ_words \
-                            if len(w)>2 and w.find('\'') == -1
-                                and  w.lower() not in stopwords
-                                and not w.isdigit()]
-      
-        #self.freqdist = nltk.FreqDist(unigram_words + NE_words)
-        #return unigram_words + NE_words
-        return nltk.FreqDist(unigram_words + NE_words)
-        
-    def __pos_morphy(self, words, pos):
-        """
-        Helper function to morph the words by PoS tag. It is called by
-        textprocess funciton.
-        @param words: the target word list to be morphed
-        @type words: L{string}
-        @param pos: NTLK's wordnet's POS tags (wn.NOUN, wn.VERB)
-        @type pos: C{int}
-        """
-        res = []
-        for word in words:
-            morphied = wn.morphy(word, pos)
-            if morphied != None:
-                res.append(morphied)
-            else:
-                res.append(word)
-        return res
-    
-    def simple_pos_morphy(self, word):
-        """
-        Helper funcion for simpletextprocess function. It doesn't process
-        the PoS tagging in the first place.
-        @param word: the raw word before morph
-        @type word: C{string}
-        """
-        morphied = wn.morphy(word, wn.NOUN)
-        if morphied != None:
-            return morphied
-        else:
-            morphied = wn.morphy(word, wn.VERB)
-            if morphied != None:
-                return morphied
-        return word
     
     
         
-
