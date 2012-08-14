@@ -137,7 +137,7 @@ class AINewsPublisher():
 
         for urlid in self.articles:
             # grab and convert article image (if it exists)
-            self.grab_convert_image(urlid, self.articles[urlid]['image_url'])
+            self.grab_convert_image(self.articles[urlid])
 
             # update article in database
             self.update_db(self.articles[urlid])
@@ -183,22 +183,24 @@ class AINewsPublisher():
         # record that these articles are publishable
         self.corpus.mark_publishable(self.publishable_articles)
 
-    def grab_convert_image(self, urlid, image_url):
-        if len(image_url) == 0:
+    def grab_convert_image(self, article):
+        if len(article['image_url']) == 0:
+            article['image_path'] = ''
             return
         try:
-            f = urllib2.urlopen(image_url)
-            img = open("%s%s" % (paths['ainews.image_dir'], str(urlid)), 'w')
+            f = urllib2.urlopen(article['image_url'])
+            img = open("%s%s" % (paths['ainews.image_dir'], str(article['urlid'])), 'w')
             img.write(f.read())
             img.close()
             # produces [urlid].jpg
             Popen("%s -format jpg -gravity Center -thumbnail 100x100 %s%s" % \
-                      (paths['imagemagick.mogrify'], paths['ainews.image_dir'], str(urlid)),
+                      (paths['imagemagick.mogrify'], paths['ainews.image_dir'], str(article['urlid'])),
                   shell = True).communicate()
             # remove [urlid] file (with no extension)
-            remove("%s%s" % (paths['ainews.image_dir'], str(urlid)))
+            remove("%s%s" % (paths['ainews.image_dir'], str(article['urlid'])))
+            article['image_path'] = "public://newsfinder_images/%s.jpg" % article['urlid']
         except:
-            pass
+            article['image_path'] = ''
 
     def update_db(self, article):
         self.db.execute("delete from categories where urlid = %s", article['urlid'])
