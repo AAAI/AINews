@@ -250,12 +250,12 @@ class AINewsPublisher():
                 published = node.findtext("Publication_date")
                 articles.append({'title': node.findtext("Title"),
                                  'source': node.findtext("Source"),
-                                 'topics': re.sub(r'^/topic/', 'http://aitopics.org/topic/', node.findtext("Topics")),
+                                 'topics': re.sub(r'/topic/', 'http://aitopics.org/topic/', node.findtext("Topics")),
                                  'pubdate': date(int(published[0:4]),
                                                  int(published[5:7]),
                                                  int(published[8:10])),
                                  'summary': node.findtext("Body"),
-                                 'url': re.sub(r'^/news/', 'http://aitopics.org/news/', node.findtext("Original_link")),
+                                 'url': re.sub(r'/news/', 'http://aitopics.org/news/', node.findtext("Original_link")),
                                  'link': node.findtext("Link"),
                                  'image': re.sub(r'<img', '<img align="left" ', node.findtext("Representative_image"))})
         except Exception, e:
