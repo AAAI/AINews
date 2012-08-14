@@ -61,9 +61,6 @@ class AINewsPublisher():
 
         if len(self.articles) == 0: return
 
-        for urlid in self.articles:
-            print "Considering", urlid
-
         # assume every article will be published; may be set to False from one
         # of the filtering processes below
         for urlid in self.articles:
