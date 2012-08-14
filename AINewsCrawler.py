@@ -30,7 +30,7 @@ class AINewsCrawler:
         self.summarizer = AINewsSummarizer()
         self.articles = []
 
-    def get_sources(self):
+    def get_sources(self, opts):
         """
         Get the news source list.
         """
@@ -41,23 +41,32 @@ class AINewsCrawler:
             if header:
                 header = False
                 continue
-            sources.append({'source_id': row[0],
-                            'title': row[1],
-                            'link': row[2],
-                            'parser': row[3],
-                            'relevance': int(row[4])})
+            if len(opts) == 0 or (opts[0][0] == '--source' and opts[0][1] == row[1]):
+                sources.append({'source_id': row[0],
+                                'title': row[1],
+                                'link': row[2],
+                                'parser': row[3],
+                                'relevance': int(row[4])})
         return sources
 
-    def fetch_all_sources(self):
-        for source in self.get_sources():
+    def fetch_all_sources(self, opts):
+        for source in self.get_sources(opts):
             print "CRAWL: Crawling \"%s\"..." % source['title']
             f = feedparser.parse(source['link'])
             for entry in f.entries:
                 d = None
+                error = False
                 try:
-                    d = date(entry.published_parsed[0], entry.published_parsed[1], entry.published_parsed[2])
-                except:
-                    d = self.today
+                    if hasattr(entry, 'published_parsed'):
+                        d = date(entry.published_parsed[0], entry.published_parsed[1], entry.published_parsed[2])
+                    else:
+                        d = date(entry.updated_parsed[0], entry.updated_parsed[1], entry.updated_parsed[2])
+                except Exception, e:
+                    print e
+                    print entry
+                    print "Could not parse date for feed", source['link']
+                    error = True
+                if error: continue
                 if d > self.today or d < self.earliest_date: continue
                 if entry.title[-6:] == '(blog)' \
                         or entry.title[-15:] == '(press release)': continue

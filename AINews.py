@@ -44,7 +44,7 @@ def usage():
     
 def crawl(opts):
     crawler = AINewsCrawler()
-    crawler.fetch_all_sources()
+    crawler.fetch_all_sources(opts)
     crawler.fetch_all_articles()
 
 def train():
