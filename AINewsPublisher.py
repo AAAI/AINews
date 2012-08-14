@@ -255,8 +255,8 @@ class AINewsPublisher():
                                                  int(published[5:7]),
                                                  int(published[8:10])),
                                  'summary': node.findtext("Body"),
-                                 'url': re.sub(r'/news/', 'http://aitopics.org/news/', node.findtext("Original_link")),
-                                 'link': node.findtext("Link"),
+                                 'url': node.findtext("Original_link"),
+                                 'link': re.sub(r'/news/', 'http://aitopics.org/news/', node.findtext("Link")),
                                  'image': re.sub(r'<img', '<img align="left" ', node.findtext("Representative_image"))})
         except Exception, e:
             print e
