@@ -256,7 +256,7 @@ class AINewsPublisher():
                 cats_fixed.append(cat)
             article['categories_fixed'] = cats_fixed
         xml.news = self.articles.values()
-        savefile(paths['ainews.output'] + "news.xml", str(xml))
+        savefile(paths['ainews.output_xml'] + "news.xml", str(xml))
 
     def generate_standard_output(self): 
         """

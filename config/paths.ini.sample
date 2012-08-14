@@ -14,6 +14,9 @@ news_data = /path/to/news/
 output = /path/to/output/
 
 ; (leave trailing slash)
+output_xml = /path/to/output_xml/
+
+; (leave trailing slash)
 html = /path/to/html/
 
 ; (leave trailing slash)
