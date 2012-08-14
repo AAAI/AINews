@@ -111,12 +111,17 @@ class AINewsCrawler:
 
         i = 0
         for article in self.articles:
-            if self.db.crawled(article['url']):
-                continue
+            print "READ:  Opening", ("%s%d" % (paths['ainews.content_tmp'], i))
             f = open("%s%d" % (paths['ainews.content_tmp'], i))
             rows = f.read().split("\n")
             f.close()
             #os.remove("%s%d" % (paths['ainews.content_tmp'], i))
+            # don't move this; have to ensure the increment occurs!
+            i += 1
+
+            if self.db.crawled(article['url']):
+                print "READ:  .. Ignoring; already in crawled database."
+                continue
 
             if len(rows) < 3:
                 print "FETCH: .. Ignoring; not enough lines in Goose output: URL=%s, ROWS=%s" % (article['url'], rows)
@@ -155,8 +160,7 @@ class AINewsCrawler:
             urlid = self.put_in_db(article)
             if urlid == None: continue
             print "CRAWL: ++ {ID:%d/%d} %s (%s, %s)" % \
-                (urlid, i, article['title'], str(article['pubdate']), article['source'])
-            i += 1
+                (urlid, i, article['title'], str(article['pubdate']), article['source'])            
 
     def put_in_db(self, article):
         """
