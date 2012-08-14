@@ -18,15 +18,17 @@ import re
 import time
 import sys
 import feedparser
+import ents
+from subprocess import *
 from datetime import date, datetime, timedelta
 from BeautifulSoup import BeautifulSoup, Comment, BeautifulStoneSoup, \
                 NavigableString, Declaration, ProcessingInstruction
 
-from AINewsConfig import config, dateformat_regexps
+from AINewsConfig import config, paths, dateformat_regexps
 from AINewsParser import AINewsParser
-from AINewsTools import strip_html, loadfile2
+from AINewsTools import strip_html, loadfile2, convert_to_printable, trunc
 
-def ParserFactory(publisher, type):
+def ParserFactory(publisher, type = None):
     """
     A factory method to return a specific parser for the specific news source.
     @param publisher: the source/publisher name
@@ -102,6 +104,8 @@ def ParserFactory(publisher, type):
         parser = IEEESpectrumRSSParser()
     elif publisher == "Curata" and type == 'rss':
         parser = CurataRSSParser()
+    elif publisher == "RSS":
+        parser = RSSParser()
     else:
         parser = None
     return parser
@@ -1876,7 +1880,7 @@ class CurataRSSParser(AINewsParser):
             url = entry.link
             title = entry.title
             self.candidates.append([url, title, d])
-                
+            
     def parse_storypage(self):
         for i, candidate in enumerate(self.candidates):
             res = self.parse_url(candidate[0])
@@ -1903,3 +1907,8 @@ class CurataRSSParser(AINewsParser):
             text = self.justext_extract(self.html)
             if len(text) == 0: continue
             self.candidates[i].append(text)
+
+class RSSParser(AINewsParser):
+    """
+    Generic RSS parser
+    """

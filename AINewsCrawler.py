@@ -6,153 +6,166 @@
 # distributed without charge for non-commercial purposes as long as this
 # notice is included.
 
-
-"""
-Crawling major news websites for latest Artificial Intelligence related news
-stories.
-AINewsCrawler is a major AINewsFinder component which is composed of
-AINewsParser, AINewsSourceParser, AINewsTextProcessor, AINewsTopic, AINewsSim,
-AINewsDB. It parses HTML news from either website's search page or website's
-RSS/Atom feeds, extracts text information, filters unrelated news and finally
-stores the bag of words of each news into database.
-"""
 import os
 import sys
 import re
-import time
-import types
-import traceback
+import feedparser
+import cgi
+from subprocess import *
 from datetime import date, timedelta
 import string
-
-import ents
+import csv
+import urllib2
 
 from AINewsConfig import config, paths, blacklist_words
-from AINewsTools import savefile, loadcsv, strip_html, savepickle, loadfile, trunc
-from AINewsParser import AINewsParser
-from AINewsSourceParser import *
+from AINewsTools import savefile, loadcsv, strip_html, savepickle, loadfile, trunc, convert_to_printable
 from AINewsDB import AINewsDB
-
-def convert_to_printable(text):
-    result = ""
-    for c in text:
-        if c in string.printable: result += str(c)
-    return result
+from AINewsSummarizer import AINewsSummarizer
 
 class AINewsCrawler:
     def __init__(self):
         self.today = date.today()
-        self.debug = config['ainews.debug']
+        self.earliest_date = self.today - timedelta(days = int(config['ainews.period']))
         self.db = AINewsDB()
-        self.parser = AINewsParser()
+        self.summarizer = AINewsSummarizer()
+        self.articles = []
 
-    def get_newssources(self, opts):
+    def get_sources(self):
         """
         Get the news source list.
         """
         sources = []
-        where = "1=1"
-        for opt in opts:
-            if opt[0] == "-s" or opt[0] == "--source":
-                where = "id = %s" % opt[1]
-        
-        sql = "select url,parser,description from sources where status = 1 and %s order by id asc" % where
-        rows = self.db.selectall(sql)
-        for row in rows:
-            items = row[1].split('::')
-            sources.append((row[0], items[0], items[1], row[2]))
+        csv_file = csv.reader(urllib2.urlopen(paths['ainews.sources_csv']))
+        header = True
+        for row in csv_file:
+            if header:
+                header = False
+                continue
+            sources.append({'source_id': row[0],
+                            'title': row[1],
+                            'link': row[2],
+                            'parser': row[3],
+                            'relevance': int(row[4])})
         return sources
 
-    def crawl(self, opts):
-        """
-        Crawl the news by source lists (Search page or RSS).
-        """
-        rows = self.get_newssources(opts)
-        for row in rows:
-            sourcepage_url = row[0]
-            publisher = row[1]
-            sourcetype = row[2]
-            tag = row[3]
-            parser = ParserFactory(publisher, sourcetype)
-            if parser == None: continue
-            if self.debug: print "Crawling %s (%s):" % (publisher, tag)
+    def fetch_all_sources(self):
+        for source in self.get_sources():
+            print "CRAWL: Crawling \"%s\"..." % source['title']
+            f = feedparser.parse(source['link'])
+            for entry in f.entries:
+                d = None
+                try:
+                    d = date(entry.published_parsed[0], entry.published_parsed[1], entry.published_parsed[2])
+                except:
+                    d = self.today
+                if d > self.today or d < self.earliest_date: continue
+                if entry.title[-6:] == '(blog)' \
+                        or entry.title[-15:] == '(press release)': continue
+
+                try:
+                    url = urllib2.urlopen(entry.link).geturl()
+                except KeyboardInterrupt:
+                    print "Quitting early due to keyboard interrupt."
+                    sys.exit()
+                except: continue
+
+                # attempt to skip blogs
+                if re.match('^.*blog.*$', url):
+                    continue
+                if self.db.crawled(url):
+                    continue
+                
+                title = cgi.escape(convert_to_printable(entry.title)).strip()
+
+                # if source is GoogleNews, extract true source from title
+                if re.match(r'^.*Google News.*$', source['title']):
+                    true_source = re.match(r'^.* - (.+)$', title).group(1)
+                    true_source = "%s via Google News" % true_source
+                elif source['title'] == "User Submitted":
+                    true_source = re.match(r'^[^\/]+:\/\/([^\/]+)(?::\d+)?\/?.*$', url).group(1)
+                    true_source = "%s (User submitted)" % true_source
+                else: true_source = source['title']
+                
+                self.articles.append({'url': url, 'title': title, 'pubdate': d,
+                                      'source': true_source, 'source_id': source['source_id'],
+                                      'source_relevance': source['relevance']})
+
+    def fetch_all_articles(self):
+        f = open("%surllist.txt" % paths['ainews.content_tmp'], 'w')
+        for article in self.articles:
+            f.write("%s\n" % article['url'])
+        f.close()
+
+        goose_cmd = "cd %s/goose; MAVEN_OPTS=\"-Xms256m -Xmx800m\" %s exec:java -Dexec.mainClass=com.gravity.goose.FetchMany -Dexec.args=\"%s\" -q" % (paths['libraries.tools'], paths['libraries.maven'], paths['ainews.content_tmp'])
+        Popen(goose_cmd, shell = True).communicate()
+
+        i = 0
+        for article in self.articles:
+            if self.db.crawled(article['url']):
+                continue
+            f = open("%s%d" % (paths['ainews.content_tmp'], i))
+            i += 1
+            rows = f.read().split("\n")
+            f.close()
+
+            if len(rows) < 3:
+                print "FETCH: .. Ignoring; not enough lines in Goose output: URL=%s, ROWS=%s" % (article['url'], rows)
+                continue
+
+            self.db.set_crawled(article['url'])
+            content = ' '.join(rows[:-2])
+            content = convert_to_printable(cgi.escape(re.sub(r'\s+', ' ', content))).strip()
+            content = re.sub("%s\\s*-?\\s*" % re.escape(article['title']), '', content)
+            content = re.sub(r'\s*Share this\s*', '', content)
+            content = re.sub(r'\s+,\s+', ', ', content)
+            content = re.sub(r'\s+\.', '.', content)
+            # shorten content to (presumably) ignore article comments
+            content = trunc(content, max_pos=3000)
+            article['content'] = content
+
+            print "SUMRY: ..", article['title']
+            article['summary'] = self.summarizer.summarize_single_ots(article['content'])
+            article['image_url'] = convert_to_printable(rows[-2]).strip()
+
+            if len(article['title']) < 5 or len(article['content']) < 1000:
+                print "CRAWL: -- Ignoring. Content or title too short. Title = {%s}; Content = {%s}" % \
+                    (article['title'], article['content'])
+                continue
+
+            # remove content with blacklisted words
+            found_blacklist_word = False
+            for word in blacklist_words:
+                if re.search("\W%s\W" % word, article['content'], re.IGNORECASE) != None:
+                    print "CRAWL: -- Ignoring. Found blacklisted word \"%s\", ignoring article." % word
+                    found_blacklist_word = True
+                    break
+            if found_blacklist_word: 
+                continue
+
+            urlid = self.put_in_db(article)
+            if urlid == None: continue
             try:
-                parser.parse_sourcepage(sourcepage_url)
-                parser.parse_storypage()
-                for candidate in parser.candidates:
-                    if len(candidate) != 4: continue
-                    url = candidate[0].encode('utf-8')
-                    print "Fetching", url
-                    title = convert_to_printable(ents.convert((re.sub(r'\s+', ' ', candidate[1])))).strip()
-                    # if publisher is GoogleNews, extract true publisher from title
-                    if publisher == "GoogleNews":
-                        print title
-                        true_publisher = re.match(r'^.* - (.+)$', title).group(1)
-                        true_publisher = "%s via Google News" % true_publisher
-                    elif publisher == "UserSubmitted":
-                        true_publisher = re.match(r'^[^\/]+:\/\/([^\/]+)(?::\d+)?\/?.*$', url).group(1)
-                        true_publisher = "%s (User submitted)" % true_publisher
-                    else: true_publisher = publisher
-
-                    # removing site title like " - NPR"
-                    title = re.sub(r'\s+[:-]\s+.*$', '', title)
-                    pubdate = candidate[2]
-                    content = convert_to_printable(ents.convert((re.sub(r'\s+', ' ', candidate[3])))).strip()
-                    if isinstance(title, types.StringType):
-                        title = unicode(title, errors = 'ignore')
-                    if isinstance(content, types.StringType):
-                        content = unicode(content, errors = 'ignore')
-                    content = re.sub("\\s*%s\\s*" % re.escape(title), '', content)
-                    content = re.sub(r'\s*Share this\s*', '', content)
-                    content = re.sub(r'\s+,\s+', ', ', content)
-                    content = re.sub(r'\s+\.', '.', content)
-
-                    if len(title) < 5 or len(content) < 2000:
-                        print "Content or title too short"
-                        continue
-
-                    # shorten content to (presumably) ignore article comments
-                    content = trunc(content, max_pos=3000)
-
-                    # remove content with blacklisted words
-                    found_blacklist_word = False
-                    for word in blacklist_words:
-                        if re.search("\W%s\W" % word, content, re.IGNORECASE) != None:
-                            print "Found blacklisted word \"%s\", ignoring article." % word
-                            found_blacklist_word = True
-                            break
-                    if found_blacklist_word: 
-                        continue
-
-                    urlid = self.put_in_db(url, pubdate, self.today, true_publisher, \
-                            tag, title, content)
-                    if urlid == None: continue
-                    try:
-                        print "{ID:%d} %s (%s, %s)" % (urlid, title, str(pubdate), true_publisher)
-                    except:
-                        pass
-
-            except (KeyboardInterrupt):
-                if self.debug: print "Quitting early due to keyboard interrupt."
-                sys.exit()
+                print "CRAWL: ++ {ID:%d} %s (%s, %s)" % \
+                    (urlid, article['title'], str(article['pubdate']), article['source'])
             except:
-                if self.debug:
-                    print "Parser for %s failed." % (publisher)
-                    print traceback.print_exc()
-                continue;
+                pass
 
-    def put_in_db(self, url, pubdate, crawldate, publisher, tag, title, content):
+    def put_in_db(self, article):
         """
-        Save the news story into database.
+        Save the article into the database.
         """
         try:
             urlid = self.db.execute("""insert into urllist (url, pubdate, crawldate,
-                publisher, tag, title, content)
-                values (%s, %s, %s, %s, %s, %s, %s)""",
-                (url, str(pubdate), str(crawldate), publisher, tag, title, content))
+                source, source_id, source_relevance, title, content, summary, image_url)
+                values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                (article['url'], str(article['pubdate']), str(self.today),
+                 article['source'], article['source_id'], article['source_relevance'],
+                 article['title'], article['content'], article['summary'], article['image_url']))
             return urlid
-        except Exception, e :
-            #if self.debug:
-            #   print >> sys.stderr, "ERROR: can't add url metadata.", e
+        except KeyboardInterrupt:
+            print "Quitting early due to keyboard interrupt."
+            sys.exit()
+        except Exception, e:
+            print "ERROR: can't add article to db:", e
             return None
 

@@ -11,7 +11,8 @@ import PyRSS2Gen
 import sys
 import operator
 import re
-from os import path, mkdir
+import urllib2
+from os import path, mkdir, remove
 from glob import glob
 from random import shuffle
 from subprocess import *
@@ -26,6 +27,7 @@ from AINewsTextProcessor import AINewsTextProcessor
 from AINewsSummarizer import AINewsSummarizer
 
 sys.path.append(paths['templates.compiled'])
+from FeedImport import FeedImport
 from LatestNewsTxt import LatestNewsTxt
 from LatestNewsEmail import LatestNewsEmail
 from LatestNewsPmWiki import LatestNewsPmWiki
@@ -42,7 +44,6 @@ class AINewsPublisher():
         self.duplicates = AINewsDuplicates()
         self.svm_classifier = AINewsSVMClassifier()
         self.txtpro = AINewsTextProcessor()
-        self.summarizer = AINewsSummarizer()
 
         self.articles = {}
         self.publishable_articles = []
@@ -99,7 +100,7 @@ class AINewsPublisher():
             # require at least two different whitelisted terms
             # unless the article is user-submitted
             if len(white_wordfreq) < 2 \
-                    and self.articles[urlid]['publisher'] != 'UserSubmitted':
+                    and self.articles[urlid]['source'] != 'User Submitted':
                 self.articles[urlid]['publish'] = False
                 self.articles[urlid]['transcript'].append(
                         'Rejected due to only one or no whitelisted terms')
@@ -111,7 +112,7 @@ class AINewsPublisher():
         # is user-submitted
         for urlid in self.articles:
             if 'NotRelated' in self.articles[urlid]['categories'] \
-                    and self.articles[urlid]['publisher'] != 'UserSubmitted':
+                    and self.articles[urlid]['source'] != 'User Submitted':
                 self.articles[urlid]['publish'] = False
                 self.articles[urlid]['transcript'].append(
                         'Rejected due to NotRelated classification')
@@ -127,20 +128,17 @@ class AINewsPublisher():
         # by this function
         self.duplicates.filter_duplicates(self.articles)
 
-        # add article summaries
-        self.summarizer.summarize(self.corpus, self.articles)
+        for urlid in self.articles:
+            print urlid, self.articles[urlid]['publish'], \
+                self.articles[urlid]['title'], \
+                self.articles[urlid]['categories'], \
+                self.articles[urlid]['summary']
+            print
 
         for urlid in self.articles:
-            try:
-                print urlid, self.articles[urlid]['publish'], \
-                    self.articles[urlid]['title'], \
-                    self.articles[urlid]['categories'], \
-                    self.articles[urlid]['summary']
-                print
-            except:
-                pass
+            # grab and convert article image (if it exists)
+            self.grab_convert_image(urlid, self.articles[urlid]['image_url'])
 
-        for urlid in self.articles:
             # update article in database
             self.update_db(self.articles[urlid])
 
@@ -185,13 +183,28 @@ class AINewsPublisher():
         # record that these articles are publishable
         self.corpus.mark_publishable(self.publishable_articles)
 
+    def grab_convert_image(self, urlid, image_url):
+        if len(image_url) == 0:
+            return
+        try:
+            f = urllib2.urlopen(image_url)
+            img = open("%s%s" % (paths['ainews.image_dir'], str(urlid)), 'w')
+            img.write(f.read())
+            img.close()
+            # produces [urlid].jpg
+            Popen("%s -format jpg -gravity Center -thumbnail 100x100 %s%s" % \
+                      (paths['imagemagick.mogrify'], paths['ainews.image_dir'], str(urlid)),
+                  shell = True).communicate()
+            # remove [urlid] file (with no extension)
+            remove("%s%s" % (paths['ainews.image_dir'], str(urlid)))
+        except:
+            pass
+
     def update_db(self, article):
         self.db.execute("delete from categories where urlid = %s", article['urlid'])
         for cat in article['categories']:
             self.db.execute("insert into categories values (%s,%s)",
                 (article['urlid'], cat))
-        self.db.execute("update urllist set summary = %s where urlid = %s",
-                        (article['summary'], article['urlid']))
 
     def get_publishable_articles(self):
         publishable = self.corpus.get_publishable()
@@ -205,9 +218,16 @@ class AINewsPublisher():
                                                article['categories'])
             self.publishable_articles.append(article)
 
-
     def mark_published(self):
         self.corpus.mark_published(self.publishable_articles)
+
+    def generate_feed_import(self):
+        """
+        Generate XML file for feed import on the Drupal site.
+        """
+        xml = FeedImport()
+        xml.news = self.articles.values()
+        savefile(paths['ainews.output'] + "news.xml", str(xml))
 
     def generate_standard_output(self): 
         """

@@ -31,6 +31,7 @@ class AINewsDB:
                                         charset = 'utf8',
                                         use_unicode = True,
                                         connect_timeout = 120)
+            self.con.autocommit(True)
         except MySQLdb.Error, e:
             print "Error %d: %s" % (e.args[0], e.args[1])
             sys.exit (1)
@@ -68,13 +69,11 @@ class AINewsDB:
         self.execute(query, args)
         return self.cursor.fetchall()
     
-    def isindexed(self, url):
-        """
-        Return true if this url is already indexed/stored in database
-        @param url: url of the news
-        @type url: C{string}
-        """
-        url = re.escape(url.encode('utf-8'))
-        urlrow = self.selectone("select urlid from urllist where url=%s", (url))
+    def crawled(self, url):
+        urlrow = self.selectone("select url from crawled where url=%s", (url,))
         return (urlrow != None)
+
+    def set_crawled(self, url):
+        self.execute("insert into crawled (url) values (%s)", (url,))
+
 

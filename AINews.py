@@ -44,7 +44,8 @@ def usage():
     
 def crawl(opts):
     crawler = AINewsCrawler()
-    crawler.crawl(opts)
+    crawler.fetch_all_sources()
+    crawler.fetch_all_articles()
 
 def train():
     svm = AINewsSVMClassifier()
@@ -53,18 +54,18 @@ def train():
 def prepare():
     publisher = AINewsPublisher()
     publisher.filter_and_process()
-    publisher.generate_pmwiki_all_output()
+    publisher.generate_feed_import()
 
 def publish():
     publisher = AINewsPublisher()
     publisher.get_publishable_articles()
-    publisher.generate_standard_output()
-    publisher.generate_email_output()
-    publisher.generate_pmwiki_published_output()
-    publisher.publish_email()
-    publisher.publish_pmwiki()
-    publisher.update_rss()
-    publisher.mark_published()
+#    publisher.generate_standard_output()
+#    publisher.generate_email_output()
+#    publisher.generate_pmwiki_published_output()
+#    publisher.publish_email()
+#    publisher.publish_pmwiki()
+#    publisher.update_rss()
+#    publisher.mark_published()
 
 def main():
     """

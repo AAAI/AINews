@@ -27,6 +27,19 @@ blacklist_urls = /path/to/blacklist_urls.txt
 
 blacklist_words = /path/to/blacklist_words.txt
 
+; URL for sources CSV file
+sources_csv = http://path/to/sources.csv
+
+; (leave trailing slash)
+content_tmp = /path/to/content_tmp/
+
+; (leave trailing slash)
+image_dir = /path/to/images/
+
+[imagemagick]
+
+mogrify = /usr/bin/mogrify
+
 [libraries]
 
 ; (leave trailing slash)
@@ -34,6 +47,9 @@ tools = /path/to/tools/
 
 ; OTS binary
 ots = /path/to/ots
+
+; Maven2 binary
+maven = /path/to/maven
 
 [templates]
 

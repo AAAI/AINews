@@ -15,7 +15,7 @@ from itertools import izip
 from AINewsConfig import config, paths
 from AINewsDB import AINewsDB
 from AINewsTextProcessor import AINewsTextProcessor
-from AINewsTools import loadpickle, trunc
+from AINewsTools import loadpickle, trunc, convert_to_printable
 
 class AINewsCorpus:
     """
@@ -59,31 +59,15 @@ class AINewsCorpus:
                  "Reasoning", "Representation", "Robots", "ScienceFiction", \
                  "Speech", "Systems", "Vision"]
 
-        self.sources = {}
-        rows = self.db.selectall("select parser, relevance from sources")
-        for row in rows:
-            self.sources[row[0].split('::')[0]] = int(row[1])
-
         self.retained_db_docs = None
         
         self.restore_corpus()
 
-    def get_relevance(self, publisher):
-        if re.search(r'via Google News', publisher):
-            publisher = 'GoogleNews'
-        return self.sources[publisher]
-
     def compare_articles(self, article1, article2):
         dupcount1 = len(article1['duplicates'])
         dupcount2 = len(article2['duplicates'])
-        if article1['publisher'].find('User submitted') != -1:
-            relevance1 = 200
-        else:
-            relevance1 = self.get_relevance(article1['publisher'])
-        if article2['publisher'].find('User submitted') != -1:
-            relevance2 = 200
-        else:
-            relevance2 = self.get_relevance(article2['publisher'])
+        relevance1 = article1['source_relevance']
+        relevance2 = article2['source_relevance']
         cat_count1 = len(article1['categories'])
         cat_count2 = len(article2['categories'])
         if cmp(dupcount1, dupcount2) == 0:
@@ -152,11 +136,13 @@ class AINewsCorpus:
             table = 'urllist'
             cat_table = 'categories'
             row = self.db.selectone("""select u.url, u.title, u.content, u.summary, 
-                u.pubdate, u.crawldate, u.processed, u.published, u.publisher
+                u.pubdate, u.crawldate, u.processed, u.published, u.source,
+                u.source_relevance, u.source_id, u.tfpn, u.image_url
                 from %s as u where u.urlid = %s""" % \
                                         (table, urlid))
         if row != None and row[2] is not None:
-            wordfreq = self.txtpro.simpletextprocess(urlid, row[2])
+            content = row[2]
+            wordfreq = self.txtpro.simpletextprocess(urlid, content)
             summary = ""
             if not corpus: summary = row[3]
             processed = False
@@ -167,22 +153,28 @@ class AINewsCorpus:
             if not corpus: pubdate = row[4]
             crawldate = ""
             if not corpus: crawldate = row[5]
-            publisher = ""
-            if not corpus: publisher = row[8]
+            source = ""
+            if not corpus: source = row[8]
+            tfpn = "xx"
+            if not corpus: tfpn = row[11]
+            source_relevance = 0
+            if row[9]: source_relevance = int(row[9])
             categories = []
             cat_rows = self.db.selectall("""select category from %s
                 where urlid = %s""" % (cat_table, urlid))
             for cat_row in cat_rows:
                 categories.append(cat_row[0])
             return {'urlid': urlid, 'url': row[0], 'title': row[1],
-                    'content': trunc(row[2], max_pos=3000),
-                    'content_all': row[2],
+                    'content': content,
                     'summary': summary,
                     'pubdate': pubdate, 'crawldate': crawldate,
                     'processed': processed, 'published': published,
-                    'publisher': publisher,
+                    'source': source, 'source_relevance': source_relevance,
+                    'source_id': row[10],
                     'categories': categories, 'duplicates': [],
-                    'wordfreq': wordfreq, 'tfidf': self.get_tfidf(urlid, wordfreq)}
+                    'tfpn': tfpn, 'wordfreq': wordfreq,
+                    'image_url': row[12],
+                    'tfidf': self.get_tfidf(urlid, wordfreq)}
         else:
             return None
 

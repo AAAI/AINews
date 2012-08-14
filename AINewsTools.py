@@ -19,6 +19,12 @@ import pickle
 import locale
 import ConfigParser
 
+def convert_to_printable(text):
+    result = ""
+    for c in text:
+        if c in string.printable: result += str(c)
+    return result
+
 def savefile(filename, content):
     """
     Helper function to save content into file.
