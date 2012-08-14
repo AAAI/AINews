@@ -81,6 +81,7 @@ class AINewsCrawler:
                 if re.match(r'^.*Google News.*$', source['title']):
                     true_source = re.match(r'^.* - (.+)$', title).group(1)
                     true_source = "%s via Google News" % true_source
+                    title = re.sub(" - %s" % re.escape(true_source), '', title)
                 elif source['title'] == "User Submitted":
                     true_source = re.match(r'^[^\/]+:\/\/([^\/]+)(?::\d+)?\/?.*$', url).group(1)
                     true_source = "%s (User submitted)" % true_source
