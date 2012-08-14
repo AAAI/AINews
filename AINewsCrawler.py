@@ -114,9 +114,9 @@ class AINewsCrawler:
             if self.db.crawled(article['url']):
                 continue
             f = open("%s%d" % (paths['ainews.content_tmp'], i))
-            i += 1
             rows = f.read().split("\n")
             f.close()
+            #os.remove("%s%d" % (paths['ainews.content_tmp'], i))
 
             if len(rows) < 3:
                 print "FETCH: .. Ignoring; not enough lines in Goose output: URL=%s, ROWS=%s" % (article['url'], rows)
@@ -130,7 +130,7 @@ class AINewsCrawler:
             content = re.sub(r'\s+,\s+', ', ', content)
             content = re.sub(r'\s+\.', '.', content)
             # shorten content to (presumably) ignore article comments
-            content = trunc(content, max_pos=3000)
+            content = trunc(content, max_pos=5000)
             article['content'] = content
 
             print "SUMRY: ..", article['title']
@@ -154,11 +154,9 @@ class AINewsCrawler:
 
             urlid = self.put_in_db(article)
             if urlid == None: continue
-            try:
-                print "CRAWL: ++ {ID:%d} %s (%s, %s)" % \
-                    (urlid, article['title'], str(article['pubdate']), article['source'])
-            except:
-                pass
+            print "CRAWL: ++ {ID:%d/%d} %s (%s, %s)" % \
+                (urlid, i, article['title'], str(article['pubdate']), article['source'])
+            i += 1
 
     def put_in_db(self, article):
         """
