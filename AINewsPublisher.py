@@ -7,11 +7,11 @@
 # notice is included.
 
 import feedparser
-import PyRSS2Gen
 import sys
 import operator
 import re
 import urllib2
+from lxml import etree
 from os import path, mkdir, remove
 from glob import glob
 from random import shuffle
@@ -28,11 +28,7 @@ from AINewsSummarizer import AINewsSummarizer
 
 sys.path.append(paths['templates.compiled'])
 from FeedImport import FeedImport
-from LatestNewsTxt import LatestNewsTxt
 from LatestNewsEmail import LatestNewsEmail
-from LatestNewsPmWiki import LatestNewsPmWiki
-from ArticlePmWiki import ArticlePmWiki
-from AllNewsPmWiki import AllNewsPmWiki
 
 class AINewsPublisher():
     def __init__(self):
@@ -46,7 +42,6 @@ class AINewsPublisher():
         self.txtpro = AINewsTextProcessor()
 
         self.articles = {}
-        self.publishable_articles = []
         self.semiauto_email_output = ""
 
         self.topicids = {"AIOverview":0, "Agents":1, "Applications":2,
@@ -208,21 +203,6 @@ class AINewsPublisher():
             self.db.execute("insert into categories values (%s,%s)",
                 (article['urlid'], cat))
 
-    def get_publishable_articles(self):
-        publishable = self.corpus.get_publishable()
-
-        self.publishable_articles = []
-
-        # drop "Applications" category if article has more categories
-        for article in publishable:
-            if len(article['categories']) > 1:
-                article['categories'] = filter(lambda c: c != "Applications",
-                                               article['categories'])
-            self.publishable_articles.append(article)
-
-    def mark_published(self):
-        self.corpus.mark_published(self.publishable_articles)
-
     def generate_feed_import(self):
         """
         Generate XML file for feed import on the Drupal site.
@@ -259,76 +239,44 @@ class AINewsPublisher():
             article['categories_fixed'] = cats_fixed
         xml.news = self.articles.values()
         savefile(paths['ainews.output_xml'] + "news.xml", str(xml))
-
-    def generate_standard_output(self): 
-        """
-        Generate the stanard output for debuging on screen.
-        """
-        txt = LatestNewsTxt()
-        txt.news = self.publishable_articles
-        savefile(paths['ainews.output'] + "std_output.txt", str(txt))
-
+        
     def generate_email_output(self):
-        """
-        Generate the output for email format.
-        """
+        articles = []
+        try:
+            f = urllib2.urlopen(paths['ainews.top_weekly_news_xml'])
+            xml = etree.parse(f)
+            for node in xml.iter("node"):
+                print "Found", node.findtext("Title")
+                published = node.findtext("Publication_date")
+                articles.append({'title': node.findtext("Title"),
+                                 'source': node.findtext("Source"),
+                                 'topics': re.sub(r'/topic/', 'http://aitopics.org/topic/', node.findtext("Topics")),
+                                 'pubdate': date(int(published[0:4]),
+                                                 int(published[5:7]),
+                                                 int(published[8:10])),
+                                 'summary': node.findtext("Body"),
+                                 'url': node.findtext("Original_link"),
+                                 'link': node.findtext("Link"),
+                                 'image': re.sub(r'<img', '<img align="left" ', node.findtext("Representative_image"))})
+        except Exception, e:
+            print e
+
         email = LatestNewsEmail()
         email.date = self.today.strftime("%B %d, %Y")
         email.year = self.today.strftime("%Y")
-        email.news = self.publishable_articles
-        email.aitopic_urls = aitopic_urls
-        email.topicids = self.topicids
+        email.articles = articles
         email_output = str(email)
 
-        savefile(paths['ainews.output'] + "email_output.txt", email_output)
-        self.semiauto_email_output = email_output
-
-    def generate_pmwiki_all_output(self):
-        pmwiki_all = AllNewsPmWiki()
-        pmwiki_all.date = self.today.strftime("%B %d, %Y")
-        pmwiki_all.year = self.today.strftime("%Y")
-        pmwiki_all.news = self.articles.values()
-        savefile(paths['ainews.output'] + "pmwiki_all.txt", str(pmwiki_all))
-
-        # Generate wiki metadata page for each article
-        urlids_output = ""
-        for urlid in self.articles:
-            urlids_output += str(urlid) + '\n'
-            article_wiki = ArticlePmWiki()
-            article_wiki.year = self.today.strftime("%Y")
-            article_wiki.dupthreshold = float(config['duplicates.threshold'])
-            article_wiki.n = self.articles[urlid]
-            savefile(paths['ainews.output'] + "aiarticles/%d" % urlid,
-                    str(article_wiki))
-        savefile(paths['ainews.output'] + "urlids_output.txt", urlids_output)
-        
-    def generate_pmwiki_published_output(self):
-        """
-        Genereate the output with PmWiki page format. It needs to be further
-        processed by AINewsPmwiki.php.
-        """
-        pmwiki = LatestNewsPmWiki()
-        pmwiki.date = self.today.strftime("%B %d, %Y")
-        pmwiki.year = self.today.strftime("%Y")
-        pmwiki.news = self.publishable_articles
-        pmwiki.rater = True
-        savefile(paths['ainews.output'] + "pmwiki_output.txt", str(pmwiki))
-        pmwiki.rater = False
-        savefile(paths['ainews.output'] + "pmwiki_output_norater.txt", str(pmwiki))
-
-    def publish_email(self):
-        """
-        Call AINewsEmail.php to send email through PHP Mail Server
-        """
-        #cmd = 'php AINewsEmail.php'
-        #Popen(cmd, shell = True, stdout = PIPE, stderr = STDOUT).communicate()
-        self.publish_email_semiauto()
+        return email_output
         
     def publish_email_semiauto(self):
         """
         Create an AINewsSemiAutoEmail.html file for admin to click and semi-auto
         send it to the subscriber list.
         """
+
+        output = self.generate_email_output()
+
         semiauto = """
         <html>
         <head>
@@ -357,92 +305,7 @@ class AINewsPublisher():
         <META HTTP-EQUIV="Expires" CONTENT="-1">
         </head>
         </html>
-        """ % ("AI Alert - "+str(self.today.strftime("%B %d, %Y")),
-               self.semiauto_email_output, self.semiauto_email_output)
+        """ % ("AI Alert - "+str(self.today.strftime("%B %d, %Y")), output, output)
         savefile(paths['ainews.html'] + "semiauto_email.html", semiauto)
 
-    def publish_pmwiki(self):
-        """
-        Call AINewsPmwiki.php to publish latest news to AAAI Pmwiki website.
-        """
-        cmd = 'php AINewsPmwiki.php'
-        Popen(cmd, shell = True).wait()
-        
-    def update_rss(self):
-        rssitems = []
-        # insert latest news into rssitems
-        for article in self.publishable_articles:
-            rssitems.append(PyRSS2Gen.RSSItem(
-                title = article['title'],
-                link = article['url'],
-                description = article['summary'],
-                guid = PyRSS2Gen.Guid(article['url']),
-                pubDate = datetime(article['pubdate'].year, \
-                    article['pubdate'].month, article['pubdate'].day)))
-            
-        rssfile = paths['ainews.rss'] + "news.xml"
-        publish_rss(rssfile, rssitems)
-        
-        
-        topicrsses = ['overview', 'agent', 'apps', 'cogsci', 'edu', 'ethsoc', 
-            'game', 'hist', 'interf', 'ml', 'nlp', 'phil', 'reason',
-             'rep', 'robot', 'scifi', 'speech', 'systems',  'vision']
-        topicitems = []
-        for i in range(len(topicrsses)):
-            topicitems.append([])
-        urlset = set()
-        for article in self.publishable_articles:
-            if article['url'] in urlset: continue
-            urlset.add(article['url'])
-            for cat in article['categories']:
-                topicid = self.topicids[cat]
-                topicitems[topicid].append(PyRSS2Gen.RSSItem(
-                        title = article['title'],
-                        link = article['url'],
-                        description = article['summary'],
-                        guid = PyRSS2Gen.Guid(article['url']),
-                        pubDate = datetime(article['pubdate'].year, \
-                            article['pubdate'].month, article['pubdate'].day)))
-            
-        for i in range(len(topicrsses)):
-            rssfile = paths['ainews.rss'] + topicrsses[i]+'.xml'
-            if len(topicitems[i]) != 0:
-                publish_rss(rssfile, topicitems[i])
-        
-    
-def publish_rss(rssfile, rssitems):
-    now = datetime.now()
-    rss_begindate = now - timedelta(days = 60)
-    
-    f = feedparser.parse(rssfile)
-    urlset = set(map(lambda e: e.link, rssitems))
-
-    # remove out-of-date news and add rest of the news into rssitems
-    for entry in f.entries:
-        if not entry.has_key('updated_parsed'): continue
-        d = datetime(entry.date_parsed[0], \
-                       entry.date_parsed[1], entry.date_parsed[2])
-        if d > now or d < rss_begindate: continue
-        if entry.link in urlset: continue
-        urlset.add(entry.link)
-        rssitems.append(PyRSS2Gen.RSSItem(
-                     title = entry.title,
-                     link = entry.link,
-                     description = entry.description,
-                     guid = PyRSS2Gen.Guid(entry.link),
-                     pubDate = d))
-
-    rssitems = sorted(rssitems, key=lambda e: e.pubDate, reverse=True)
-    
-    # Use PyRSS2Gen to generate the output RSS    
-    rss = PyRSS2Gen.RSS2(
-        title = f.channel.title,
-        link = f.channel.link,
-        description = f.channel.description,
-        lastBuildDate = now,
-        language = 'en-us',
-        webMaster = "aitopics08@aaai.org (AI Topics)",
-        items = rssitems)
-    
-    rss.write_xml(open(rssfile, "w"))
 

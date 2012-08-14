@@ -33,6 +33,9 @@ blacklist_words = /path/to/blacklist_words.txt
 ; URL for sources CSV file
 sources_csv = http://path/to/sources.csv
 
+; URL for weekly news XML file
+top_weekly_news_xml = http://path/to/top-weekly-news.xml
+
 ; (leave trailing slash)
 content_tmp = /path/to/content_tmp/
 

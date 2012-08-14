@@ -58,14 +58,7 @@ def prepare():
 
 def publish():
     publisher = AINewsPublisher()
-    publisher.get_publishable_articles()
-#    publisher.generate_standard_output()
-#    publisher.generate_email_output()
-#    publisher.generate_pmwiki_published_output()
-#    publisher.publish_email()
-#    publisher.publish_pmwiki()
-#    publisher.update_rss()
-#    publisher.mark_published()
+    publisher.publish_email_semiauto()
 
 def main():
     """
