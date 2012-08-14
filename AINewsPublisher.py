@@ -229,6 +229,35 @@ class AINewsPublisher():
         Generate XML file for feed import on the Drupal site.
         """
         xml = FeedImport()
+        for article in self.articles.values():
+            cats_fixed = []
+            for cat in article['categories']:
+                if cat == "Agents": continue
+                if cat == "AIOverview":
+                    cat = "AI Overview"
+                if cat == "Applications":
+                    cat = "Application Areas"
+                if cat == "CognitiveScience":
+                    cat = "Cognitive Science"
+                if cat == "Education": continue
+                if cat == "Ethics":
+                    cat = "Ethics &amp; Social Issues"
+                if cat == "Games":
+                    cat = "Games &amp; Puzzles"
+                if cat == "MachineLearning":
+                    cat = "Machine Learning"
+                if cat == "NaturalLanguage":
+                    cat = "Natural Language"
+                if cat == "Reasoning":
+                    cat = "Reasoning &amp; Representation"
+                if cat == "Representation":
+                    cat = "Reasining &amp; Representation"
+                if cat == "ScienceFiction":
+                    cat = "Science Fiction"
+                if cat == "Systems":
+                    cat = "Systems &amp; Languages"
+                cats_fixed.append(cat)
+            article['categories_fixed'] = cats_fixed
         xml.news = self.articles.values()
         savefile(paths['ainews.output'] + "news.xml", str(xml))
 

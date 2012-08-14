@@ -66,35 +66,7 @@ class AINewsSVMClassifier:
                     articles[urlids[i-1]]['categories'].append(cat)
 
             for urlid in urlids:
-                cats = sorted(articles[urlid]['categories'])
-                cats_fixed = []
-                for cat in cats:
-                    if cat == "Agents": continue
-                    if cat == "AIOverview":
-                        cat = "AI Overview"
-                    if cat == "Applications":
-                        cat = "Application Areas"
-                    if cat == "CognitiveScience":
-                        cat = "Cognitive Science"
-                    if cat == "Education": continue
-                    if cat == "Ethics":
-                        cat = "Ethics &amp; Social Issues"
-                    if cat == "Games":
-                        cat = "Games &amp; Puzzles"
-                    if cat == "MachineLearning":
-                        cat = "Machine Learning"
-                    if cat == "NaturalLanguage":
-                        cat = "Natural Language"
-                    if cat == "Reasoning":
-                        cat = "Reasoning &amp; Representation"
-                    if cat == "Representation":
-                        cat = "Reasining &amp; Representation"
-                    if cat == "ScienceFiction":
-                        cat = "Science Fiction"
-                    if cat == "Systems":
-                        cat = "Systems &amp; Languages"
-                    cats_fixed.append(cat)
-                articles[urlid]['categories'] = cats_fixed
+                articles[urlid]['categories'] = sorted(articles[urlid]['categories'])
 
     def train(self, ident):
         (train_corpus, _) = self.corpus.load_corpus(ident, 1.0, True)
