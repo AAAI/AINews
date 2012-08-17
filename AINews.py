@@ -56,7 +56,7 @@ def prepare():
     publisher.filter_and_process()
     publisher.generate_feed_import()
 
-def publish():
+def email():
     publisher = AINewsPublisher()
     publisher.publish_email_semiauto()
 
@@ -67,7 +67,7 @@ def main():
     # Set en_US, UTF8
     locale.setlocale(locale.LC_ALL,'en_US.UTF-8')
 
-    commands_list = ("train", "crawl", "prepare", "publish", "help")
+    commands_list = ("train", "crawl", "prepare", "email", "help")
     try:
         if len(sys.argv) < 2 or sys.argv[1] not in commands_list:
             usage()
@@ -89,8 +89,8 @@ def main():
     elif command == "prepare":
         prepare()
 
-    elif command == "publish":
-        publish()
+    elif command == "email":
+        email()
 
 if __name__ == "__main__":
     main()
