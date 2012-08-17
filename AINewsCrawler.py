@@ -81,6 +81,9 @@ class AINewsCrawler:
                 # attempt to skip blogs
                 if re.match('^.*blog.*$', url):
                     continue
+                # attempt to skip job postings
+                if re.match('^.*job.*$', url):
+                    continue
                 if self.db.crawled(url):
                     continue
                 
