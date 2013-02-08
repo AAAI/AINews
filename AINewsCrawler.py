@@ -55,7 +55,6 @@ class AINewsCrawler:
             f = feedparser.parse(source['link'])
             for entry in f.entries:
                 d = None
-                error = False
                 try:
                     if hasattr(entry, 'published_parsed'):
                         d = date(entry.published_parsed[0], entry.published_parsed[1], entry.published_parsed[2])
@@ -64,9 +63,8 @@ class AINewsCrawler:
                 except Exception, e:
                     print e
                     print entry
-                    print "Could not parse date for feed", source['link']
-                    error = True
-                if error: continue
+                    print "Setting date as today; could not parse date for feed", source['link']
+                    d = self.today
                 if d > self.today or d < self.earliest_date: continue
                 if entry.title[-6:] == '(blog)' \
                         or entry.title[-15:] == '(press release)': continue
@@ -104,6 +102,9 @@ class AINewsCrawler:
                                       'source_relevance': source['relevance']})
 
     def fetch_all_articles(self):
+        try:
+            os.makedirs(paths['ainews.content_tmp'])
+        except: pass
         f = open("%surllist.txt" % paths['ainews.content_tmp'], 'w')
         for article in self.articles:
             f.write("%s\n" % article['url'])
@@ -141,8 +142,8 @@ class AINewsCrawler:
             content = trunc(content, max_pos=5000)
             article['content'] = content
 
-            print "SUMRY: ..", article['title']
-            article['summary'] = self.summarizer.summarize_single_ots(article['content'])
+            article['summary'] = self.summarizer.summarize_first_two_sentences(article['content'])
+            print "SUMRY: ..", article['summary']
             article['image_url'] = convert_to_printable(rows[-2]).strip()
 
             if len(article['title']) < 5 or len(article['content']) < 1000:

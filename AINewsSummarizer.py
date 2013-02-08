@@ -10,6 +10,7 @@ from operator import itemgetter
 from subprocess import *
 import sys
 import os
+import re
 import nltk
 
 from AINewsConfig import stopwords, paths
@@ -17,6 +18,11 @@ from AINewsConfig import stopwords, paths
 class AINewsSummarizer:
     def __init__(self):
         self.sent_detector = nltk.data.load('tokenizers/punkt/english.pickle')
+
+    def summarize_first_two_sentences(self, content):
+        content = re.sub(r'^\s*[\(\[].*?[\)\]]\s*', '', content)
+        sentences = self.sent_detector.tokenize(content)
+        return " ".join(sentences[:2]).strip()
 
     def summarize_single_ots(self, content):
         f = open(paths['ainews.output'] + 'content.txt', 'w')
