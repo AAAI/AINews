@@ -13,12 +13,13 @@ import feedparser
 import cgi
 from subprocess import *
 from datetime import date, timedelta
+import codecs
 import string
 import csv
 import urllib2
 
 from AINewsConfig import config, paths, blacklist_words
-from AINewsTools import savefile, loadcsv, strip_html, savepickle, loadfile, trunc, convert_to_printable
+from AINewsTools import trunc, convert_to_printable
 from AINewsDB import AINewsDB
 from AINewsSummarizer import AINewsSummarizer
 
@@ -57,18 +58,23 @@ class AINewsCrawler:
                 d = None
                 try:
                     if hasattr(entry, 'published_parsed'):
-                        d = date(entry.published_parsed[0], entry.published_parsed[1], entry.published_parsed[2])
+                        d = date(entry.published_parsed[0],
+                                 entry.published_parsed[1],
+                                 entry.published_parsed[2])
                     else:
-                        d = date(entry.updated_parsed[0], entry.updated_parsed[1], entry.updated_parsed[2])
+                        d = date(entry.updated_parsed[0],
+                                 entry.updated_parsed[1],
+                                 entry.updated_parsed[2])
                 except Exception, e:
                     print e
                     print entry
-                    print "Setting date as today; could not parse date for feed", source['link']
+                    print "Setting date as today; could not parse date for feed", \
+                        source['link']
                     d = self.today
                 if d > self.today or d < self.earliest_date: continue
                 if entry.title[-6:] == '(blog)' \
-                        or entry.title[-15:] == '(press release)': continue
-
+                        or entry.title[-15:] == '(press release)':
+                    continue
                 try:
                     url = urllib2.urlopen(entry.link).geturl()
                 except KeyboardInterrupt:
@@ -82,6 +88,7 @@ class AINewsCrawler:
                 # attempt to skip job postings
                 if re.match('^.*job.*$', url):
                     continue
+                # skip urls we have already crawled
                 if self.db.crawled(url):
                     continue
                 
@@ -92,9 +99,6 @@ class AINewsCrawler:
                     true_source = re.match(r'^.* - (.+)$', title).group(1)
                     true_source = "%s via Google News" % true_source
                     title = re.match(r'^(.*) - .+$', title).group(1)
-                elif source['title'] == "User Submitted":
-                    true_source = re.match(r'^[^\/]+:\/\/([^\/]+)(?::\d+)?\/?.*$', url).group(1)
-                    true_source = "%s (User submitted)" % true_source
                 else: true_source = source['title']
                 
                 self.articles.append({'url': url, 'title': title, 'pubdate': d,
@@ -110,13 +114,14 @@ class AINewsCrawler:
             f.write("%s\n" % article['url'])
         f.close()
 
-        goose_cmd = "cd %s/goose; MAVEN_OPTS=\"-Xms256m -Xmx800m\" %s exec:java -Dexec.mainClass=com.gravity.goose.FetchMany -Dexec.args=\"%s\" -q" % (paths['libraries.tools'], paths['libraries.maven'], paths['ainews.content_tmp'])
+        goose_cmd = "cd %s/goose; MAVEN_OPTS=\"-Xms256m -Xmx800m\" %s exec:java -Dexec.mainClass=com.gravity.goose.FetchMany -Dexec.args=\"%s\" -q" % \
+            (paths['libraries.tools'], paths['libraries.maven'], paths['ainews.content_tmp'])
         Popen(goose_cmd, shell = True).communicate()
 
         i = 0
         for article in self.articles:
             print "READ:  Opening", ("%s%d" % (paths['ainews.content_tmp'], i))
-            f = open("%s%d" % (paths['ainews.content_tmp'], i))
+            f = codecs.open("%s%d" % (paths['ainews.content_tmp'], i), encoding='utf-8')
             rows = f.read().split("\n")
             f.close()
             #os.remove("%s%d" % (paths['ainews.content_tmp'], i))
@@ -128,7 +133,8 @@ class AINewsCrawler:
                 continue
 
             if len(rows) < 3:
-                print "FETCH: .. Ignoring; not enough lines in Goose output: URL=%s, ROWS=%s" % (article['url'], rows)
+                print "FETCH: .. Ignoring; not enough lines in Goose output: URL=%s, ROWS=%s" % \
+                    (article['url'], rows)
                 continue
 
             self.db.set_crawled(article['url'])
