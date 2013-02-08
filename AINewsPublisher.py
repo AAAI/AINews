@@ -18,11 +18,10 @@ from random import shuffle
 from subprocess import *
 from datetime import date, datetime, timedelta
 from AINewsTools import savefile
-from AINewsConfig import config, paths, aitopic_urls, blacklist_urls
+from AINewsConfig import config, paths, blacklist_urls
 from AINewsDB import AINewsDB
 from AINewsCorpus import AINewsCorpus
 from AINewsDuplicates import AINewsDuplicates
-from AINewsSVMClassifier import AINewsSVMClassifier
 from AINewsTextProcessor import AINewsTextProcessor
 from AINewsSummarizer import AINewsSummarizer
 

@@ -51,29 +51,6 @@ else:
         stopwords.add(word.rstrip())
     file.close()
 
-# aitopic_urls is used to assign each news to a category by comparing the
-# similarity with the following webpages.
-aitopic_urls = [
-    "http://aaai.org/AITopics/AIOverview",
-    "http://aaai.org/AITopics/Agents",
-    "http://aaai.org/AITopics/Applications",
-    "http://aaai.org/AITopics/CognitiveScience",
-    "http://aaai.org/AITopics/Education",
-    "http://aaai.org/AITopics/Ethics",
-    "http://aaai.org/AITopics/Games",
-    "http://aaai.org/AITopics/History",
-    "http://aaai.org/AITopics/Interfaces",
-    "http://aaai.org/AITopics/MachineLearning",
-    "http://aaai.org/AITopics/NaturalLanguage",
-    "http://aaai.org/AITopics/Philosophy",
-    "http://aaai.org/AITopics/Reasoning",
-    "http://aaai.org/AITopics/Representation",
-    "http://aaai.org/AITopics/Robots",
-    "http://aaai.org/AITopics/ScienceFiction",
-    "http://aaai.org/AITopics/Speech",
-    "http://aaai.org/AITopics/Systems",
-    "http://aaai.org/AITopics/Vision"
-   ]
 
 """
 Regular expression used to extract the date from text

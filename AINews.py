@@ -14,29 +14,23 @@ import locale
 from AINewsConfig import config, paths
 from AINewsCrawler import AINewsCrawler
 from AINewsPublisher import AINewsPublisher
-from AINewsSVMClassifier import AINewsSVMClassifier
 
 def usage():
     """
     Print out the command-line usage of AINews.py.
     """
-    usage = """                AINews Finder 
+    usage = """                NewsFinder
     USAGE:
         python AINews.py COMMAND [OPTION]
     COMMAND:
         (1) crawl:
-            crawl latest news from outside web.
+            Crawl latest news from outside web.
 
-        (2) train:
-            train news classifiers based on human rates.
-            
-        (3) publish:
-            publish news from output files to Pmwiki site and send emails.
-            It is weekly publish to the public.
-            
-        View Latest news at:
-        http://www.aaai.org/AITopics/AINews
-            
+        (2) prepare:
+            Filter and process the news, and create an XML export.
+
+        (3) email:
+            Generate an email form for submitting the weekly alert.
         """
 
     print usage
@@ -46,10 +40,6 @@ def crawl(opts):
     crawler = AINewsCrawler()
     crawler.fetch_all_sources(opts)
     crawler.fetch_all_articles()
-
-def train():
-    svm = AINewsSVMClassifier()
-    svm.train('db:cat_corpus:cat_corpus_cats')
 
 def prepare():
     publisher = AINewsPublisher()
@@ -61,29 +51,24 @@ def email():
     publisher.publish_email_semiauto()
 
 def main():
-    """
-    Main function of AINews.py
-    """
     # Set en_US, UTF8
     locale.setlocale(locale.LC_ALL,'en_US.UTF-8')
 
-    commands_list = ("train", "crawl", "prepare", "email", "help")
+    commands_list = ("crawl", "prepare", "email", "help")
     try:
         if len(sys.argv) < 2 or sys.argv[1] not in commands_list:
             usage()
             sys.exit()
         command = sys.argv[1]
-        opts, args = getopt.getopt(sys.argv[2:], 'rf:u:s:', ['url=', 'file=', 'rss', 'source='])
+        opts, args = getopt.getopt(sys.argv[2:], 'rf:u:s:',
+                                   ['url=', 'file=', 'rss', 'source='])
     except getopt.GetoptError, err:
         # print help information and exit:
         print str(err) # will print something like "option -a not recognized"
         usage()
         sys.exit(2)
 
-    if command == "train":
-        train()
-
-    elif command == "crawl":
+    if command == "crawl":
         crawl(opts)
 
     elif command == "prepare":
@@ -94,4 +79,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
