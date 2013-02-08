@@ -17,7 +17,7 @@ from glob import glob
 from random import shuffle
 from subprocess import *
 from datetime import date, datetime, timedelta
-from AINewsTools import savefile
+from AINewsTools import savefile, convert_to_printable
 from AINewsConfig import config, paths, aitopic_urls, blacklist_urls
 from AINewsDB import AINewsDB
 from AINewsCorpus import AINewsCorpus
@@ -63,6 +63,7 @@ class AINewsPublisher():
             self.articles[urlid]['transcript'] = []
 
         # filter by date
+        print "Filtering by date..."
         for urlid in self.articles:
             if self.articles[urlid]['pubdate'] == None:
                 # give a meaningful pubdate so that other code doesn't crash
@@ -78,6 +79,7 @@ class AINewsPublisher():
                             self.articles[urlid]['pubdate'].strftime('%F')))
 
         # filter by blacklist (for urls)
+        print "Filtering by blacklist..."
         for urlid in self.articles:
             for black in blacklist_urls:
                 if re.search(black, self.articles[urlid]['url']):
@@ -87,6 +89,7 @@ class AINewsPublisher():
                     break
 
         # filter by whitelist
+        print "Filtering by whitelist..."
         for urlid in self.articles:
             white_wordfreq = self.txtpro.whiteprocess(urlid,
                     self.articles[urlid]['content'])
@@ -101,6 +104,7 @@ class AINewsPublisher():
                         'Rejected due to only one or no whitelisted terms')
 
         # update categories based on SVM classifier predictions
+        print "Classifying..."
         self.svm_classifier.predict(self.articles)
 
         # drop articles classified as 'NotRelated' unless the article
@@ -113,6 +117,7 @@ class AINewsPublisher():
                         'Rejected due to NotRelated classification')
 
         # drop articles with no categories (even if user-submitted)
+        print "Dropping articles with no categories..."
         for urlid in self.articles:
             if len(self.articles[urlid]['categories']) == 0:
                 self.articles[urlid]['publish'] = False
@@ -121,6 +126,7 @@ class AINewsPublisher():
 
         # filter out duplicates; some articles may have 'publish' set to False
         # by this function
+        print "Filtering duplicates..."
         self.duplicates.filter_duplicates(self.articles)
 
         for urlid in self.articles:
@@ -130,6 +136,7 @@ class AINewsPublisher():
                 self.articles[urlid]['summary']
             print
 
+        print "Grabbing images..."
         for urlid in self.articles:
             # grab and convert article image (if it exists)
             self.grab_convert_image(self.articles[urlid])
@@ -138,6 +145,7 @@ class AINewsPublisher():
             self.update_db(self.articles[urlid])
 
         # mark each as processed
+        print "Marking as processed."
         self.corpus.mark_processed(self.articles.itervalues())
 
         # save sorted list of articles to be read by AINewsPublisher; sort by
@@ -188,13 +196,14 @@ class AINewsPublisher():
             img.write(f.read())
             img.close()
             # produces [urlid].jpg
-            Popen("%s -format jpg -gravity Center -thumbnail 100x100 %s%s" % \
+            Popen("%s -format jpg -gravity Center -thumbnail 200x200 %s%s" % \
                       (paths['imagemagick.mogrify'], paths['ainews.image_dir'], str(article['urlid'])),
                   shell = True).communicate()
             # remove [urlid] file (with no extension)
             remove("%s%s" % (paths['ainews.image_dir'], str(article['urlid'])))
             article['image_path'] = "public://newsfinder_images/%s.jpg" % article['urlid']
-        except:
+        except Exception as e:
+            print "Failed converting image for %d: %s" % (article['urlid'], e)
             article['image_path'] = ''
 
     def update_db(self, article):
@@ -209,13 +218,12 @@ class AINewsPublisher():
         """
         xml = FeedImport()
         for article in self.articles.values():
+            article['source'] = re.sub(r'&', '&amp;', article['source'])
             cats_fixed = []
             for cat in article['categories']:
                 if cat == "Agents": continue
                 if cat == "AIOverview":
                     cat = "AI Overview"
-                if cat == "Applications":
-                    cat = "Application Areas"
                 if cat == "CognitiveScience":
                     cat = "Cognitive Science"
                 if cat == "Education": continue
@@ -228,9 +236,9 @@ class AINewsPublisher():
                 if cat == "NaturalLanguage":
                     cat = "Natural Language"
                 if cat == "Reasoning":
-                    cat = "Reasoning &amp; Representation"
+                    cat = "Representation &amp; Reasoning"
                 if cat == "Representation":
-                    cat = "Reasining &amp; Representation"
+                    cat = "Representation &amp; Reasoning"
                 if cat == "ScienceFiction":
                     cat = "Science Fiction"
                 if cat == "Systems":
@@ -254,10 +262,10 @@ class AINewsPublisher():
                                  'pubdate': date(int(published[0:4]),
                                                  int(published[5:7]),
                                                  int(published[8:10])),
-                                 'summary': node.findtext("Body"),
+                                 'summary': re.sub(r'</p>(</blockquote>)?$', '', re.sub(r'^(<blockquote>)?<p>', '', convert_to_printable(node.findtext("Body")))),
                                  'url': node.findtext("Original_link"),
                                  'link': re.sub(r'/news/', 'http://aitopics.org/news/', node.findtext("Link")),
-                                 'image': re.sub(r'<img', '<img align="left" style="margin: 5px 5px 5px 0;" ',
+                                 'image': re.sub(r'<img', '<img align="left" style="margin: 8px 8px 8px 0; border: 1px solid #ccc; padding: 5px; background: white;" ',
                                                  node.findtext("Representative_image"))})
         except Exception, e:
             print e
