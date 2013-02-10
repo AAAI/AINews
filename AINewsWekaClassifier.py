@@ -108,6 +108,7 @@ class AINewsWekaClassifier:
         for f in files:
             m = re.match(r'^(\d+).arff$', f)
             if m:
+                if m.group(1) == '0': continue
                 tids.append(int(m.group(1)))
         return tids
 
