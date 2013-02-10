@@ -15,7 +15,6 @@ from itertools import izip
 from AINewsConfig import config, paths
 from AINewsDB import AINewsDB
 from AINewsTextProcessor import AINewsTextProcessor
-from AINewsTools import loadpickle, trunc, convert_to_printable
 
 class AINewsCorpus:
     """

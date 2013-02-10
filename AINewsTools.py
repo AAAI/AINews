@@ -13,64 +13,13 @@ and html/text processing.
 import os
 import sys
 import re
-import csv
 import string
 import pickle
-import locale
 import ConfigParser
 from unidecode import unidecode
 
-# from http://www.jamesmurty.com/2011/12/30/python-code-utf8-to-latin1/
-def encode_utf8_to_iso88591(utf8_text):
-    '''
-    Encode and return the given UTF-8 text as ISO-8859-1 (latin1) with
-    unsupported characters replaced by '?', except for common special
-    characters like smart quotes and symbols that we handle as well as we can.
-    For example, the copyright symbol => '(c)' etc.
-
-    If the given value is not a string it is returned unchanged.
-
-    References:
-    en.wikipedia.org/wiki/Quotation_mark_glyphs#Quotation_marks_in_Unicode
-    en.wikipedia.org/wiki/Copyright_symbol
-    en.wikipedia.org/wiki/Registered_trademark_symbol
-    en.wikipedia.org/wiki/Sound_recording_copyright_symbol
-    en.wikipedia.org/wiki/Service_mark_symbol
-    en.wikipedia.org/wiki/Trademark_symbol
-    '''
-    if not isinstance(utf8_text, basestring):
-        return utf8_text
-    # Replace "smart" and other single-quote like things
-    utf8_text = re.sub(
-        u'[\u02bc\u2018\u2019\u201a\u201b\u2039\u203a\u300c\u300d(\xe2\x80\x99)\xe2]',
-        "'", utf8_text)
-    # Replace "smart" and other double-quote like things
-    utf8_text = re.sub(
-        u'[\u00ab\u00bb\u201c\u201d\u201e\u201f\u300e\u300f]',
-        '"', utf8_text)
-    # Replace copyright symbol
-    utf8_text = re.sub(u'[\u00a9\u24b8\u24d2]', '(c)', utf8_text)
-    # Replace registered trademark symbol
-    utf8_text = re.sub(u'[\u00ae\u24c7]', '(r)', utf8_text)
-    # Replace sound recording copyright symbol
-    utf8_text = re.sub(u'[\u2117\u24c5\u24df]', '(p)', utf8_text)
-    # Replace service mark symbol
-    utf8_text = re.sub(u'[\u2120]', '(sm)', utf8_text)
-    # Replace trademark symbol
-    utf8_text = re.sub(u'[\u2122]', '(tm)', utf8_text)
-    # Replace mdash
-    utf8_text = re.sub(u'[\xe2]', '---', utf8_text)
-    # Replace umlaut e
-    utf8_text = re.sub(u'[\xc3]', 'e', utf8_text)
-
-    return utf8_text.encode('ISO-8859-1', 'replace')
-
 def convert_to_printable(text):
     return unidecode(text)
-    #result = ""
-    #for c in text:
-    #    if c in string.printable: result += str(c)
-    #return result
 
 def savefile(filename, content):
     """
@@ -121,46 +70,6 @@ def loadfile2(filename):
         f.close()
         return content
     
-def loadpickle(filename):
-    """
-    Helper function to load content by Python's Pickle module.
-    @param filename: target file's name
-    @type filename: C{string}
-    """
-    pkl_file = open(filename, 'rb')
-    content = pickle.load(pkl_file)
-    pkl_file.close()
-    return content
-
-def savepickle(filename, content):
-    """
-    Helper function to save content into file.
-    @param filename: save content into target file's name
-    @type filename: C{string}
-    @param content: the content to be saved
-    @type content: C{string}
-    """
-    output = open(filename, 'wb')
-    pickle.dump(content, output)
-    output.close()
-    
-def loadcsv(filename):
-    """
-    Read csv files and return rows
-    @param filename: target file's name
-    @type filename: C{string}
-    """
-    rows = []
-    try:
-        file = open(filename, 'r')
-    except IOError , e:
-        print "Fail to csv file because of %s" % e
-    else:
-        for row in csv.reader(file):
-            rows.append(row)
-        file.close()
-    return rows
-
 def unescape(url):
     """
     The url retrieved from MySQL database has extra slash('\') for all the
@@ -189,47 +98,6 @@ def loadconfig(filename, config={}):
             config[name + "." + string.lower(opt)] = \
                                                 string.strip(cp.get(sec, opt))
     return config
-
-def loadpmwiki(filename):
-    """
-    Deprecated.
-    Load Pmwiki page from wiki.d directory and extract contents.
-    """
-    lines = loadfile(filename)
-    page = {}
-    for line in lines:
-        pos = re.search("=", line)
-        if pos != None:
-            page[line[:pos.start()]] = line[pos.end():]
-    return page
-
-def savepmwiki(filename, page):
-    """
-    Deprecated.
-    Save Pmwiki page from wiki.d directory
-    """
-    content = ""
-    for key in page:
-        content += key + '=' + page[key]
-    savefile(filename, content)
-        
-def strip_html(html):
-    """
-    Helper function to quickly remove all the <> tags from the html code.
-    @param html: target raw html code
-    @type html: C{string}
-    """
-    res = ''
-    start = 0
-    for char in html:
-        if char == '<':
-            start = 1
-        elif char == '>':
-            start = 0
-            res += ' '
-        elif start == 0:
-            res += char
-    return res
 
 def getwords(raw):
     """

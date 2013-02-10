@@ -17,13 +17,14 @@ from glob import glob
 from random import shuffle
 from subprocess import *
 from datetime import date, datetime, timedelta
-from AINewsTools import savefile, convert_to_printable
-from AINewsConfig import config, paths, aitopic_urls, blacklist_urls
+from AINewsTools import savefile
+from AINewsConfig import config, paths, blacklist_urls
 from AINewsDB import AINewsDB
 from AINewsCorpus import AINewsCorpus
 from AINewsDuplicates import AINewsDuplicates
 from AINewsTextProcessor import AINewsTextProcessor
 from AINewsSummarizer import AINewsSummarizer
+from AINewsWekaClassifier import AINewsWekaClassifier
 
 sys.path.append(paths['templates.compiled'])
 from FeedImport import FeedImport
@@ -37,18 +38,11 @@ class AINewsPublisher():
         self.db = AINewsDB()
         self.corpus = AINewsCorpus()
         self.duplicates = AINewsDuplicates()
-        self.svm_classifier = AINewsSVMClassifier()
         self.txtpro = AINewsTextProcessor()
+        self.weka = AINewsWekaClassifier()
 
         self.articles = {}
         self.semiauto_email_output = ""
-
-        self.topicids = {"AIOverview":0, "Agents":1, "Applications":2,
-           "CognitiveScience":3, "Education":4,"Ethics":5, 
-           "Games":6, "History":7, "Interfaces":8, "MachineLearning":9,
-           "NaturalLanguage":10, "Philosophy":11, "Reasoning":12,
-           "Representation":13, "Robots":14, "ScienceFiction":15,"Speech":16,
-           "Systems":17,  "Vision":18}
 
     def filter_and_process(self):
         self.articles = self.corpus.get_unprocessed()
@@ -102,20 +96,11 @@ class AINewsPublisher():
                 self.articles[urlid]['transcript'].append(
                         'Rejected due to only one or no whitelisted terms')
 
-        # update categories based on SVM classifier predictions
+        # update categories based on classifier predictions
         print "Classifying..."
-        self.svm_classifier.predict(self.articles)
+        weka.predict(articles)
 
-        # drop articles classified as 'NotRelated' unless the article
-        # is user-submitted
-        for urlid in self.articles:
-            if 'NotRelated' in self.articles[urlid]['categories'] \
-                    and self.articles[urlid]['source'] != 'User Submitted':
-                self.articles[urlid]['publish'] = False
-                self.articles[urlid]['transcript'].append(
-                        'Rejected due to NotRelated classification')
-
-        # drop articles with no categories (even if user-submitted)
+        # drop articles with no categories
         print "Dropping articles with no categories..."
         for urlid in self.articles:
             if len(self.articles[urlid]['categories']) == 0:
@@ -147,44 +132,6 @@ class AINewsPublisher():
         print "Marking as processed."
         self.corpus.mark_processed(self.articles.itervalues())
 
-        # save sorted list of articles to be read by AINewsPublisher; sort by
-        # duplicate count (more = better), then relevance of source,
-        # then by number of categories (more = better)
-        unpublished_articles = sorted(
-                filter(lambda x: x['publish'], self.articles.values()),
-                cmp=lambda x,y: self.corpus.compare_articles(x, y),
-                reverse = True)
-
-        max_cat_count = int(config['publisher.max_cat_count'])
-        max_count = int(config['publisher.max_count'])
-        cat_counts = {}
-        for cat in self.corpus.categories:
-            cat_counts[cat] = 0
-        # choose stories such that no category has more than max_cat_count
-        # members and no more than max_count stories have been selected
-        # (independent of category); only one of the article's categories needs
-        # to have "free space"
-        self.publishable_articles = []
-        for article in unpublished_articles:
-            if len(self.publishable_articles) == max_count:
-                break
-            free_cat = False
-            for cat in article['categories']:
-                if cat_counts[cat] < max_cat_count:
-                    free_cat = True
-                    break
-            # if there is a free category or this article has only the
-            # Applications category, then it can be published
-            if free_cat or (article['categories'] == ['Applications']):
-                self.publishable_articles.append(article)
-                self.articles[article['urlid']]['transcript'].append('Published')
-                self.articles[article['urlid']]['published'] = True
-                for cat in article['categories']:
-                    cat_counts[cat] += 1
-
-        # record that these articles are publishable
-        self.corpus.mark_publishable(self.publishable_articles)
-
     def grab_convert_image(self, article):
         if len(article['image_url']) == 0:
             article['image_path'] = ''
@@ -196,7 +143,8 @@ class AINewsPublisher():
             img.close()
             # produces [urlid].jpg
             Popen("%s -format jpg -gravity Center -thumbnail 200x200 %s%s" % \
-                      (paths['imagemagick.mogrify'], paths['ainews.image_dir'], str(article['urlid'])),
+                      (paths['imagemagick.mogrify'], paths['ainews.image_dir'],
+                       str(article['urlid'])),
                   shell = True).communicate()
             # remove [urlid] file (with no extension)
             remove("%s%s" % (paths['ainews.image_dir'], str(article['urlid'])))
@@ -218,32 +166,6 @@ class AINewsPublisher():
         xml = FeedImport()
         for article in self.articles.values():
             article['source'] = re.sub(r'&', '&amp;', article['source'])
-            cats_fixed = []
-            for cat in article['categories']:
-                if cat == "Agents": continue
-                if cat == "AIOverview":
-                    cat = "AI Overview"
-                if cat == "CognitiveScience":
-                    cat = "Cognitive Science"
-                if cat == "Education": continue
-                if cat == "Ethics":
-                    cat = "Ethics &amp; Social Issues"
-                if cat == "Games":
-                    cat = "Games &amp; Puzzles"
-                if cat == "MachineLearning":
-                    cat = "Machine Learning"
-                if cat == "NaturalLanguage":
-                    cat = "Natural Language"
-                if cat == "Reasoning":
-                    cat = "Representation &amp; Reasoning"
-                if cat == "Representation":
-                    cat = "Representation &amp; Reasoning"
-                if cat == "ScienceFiction":
-                    cat = "Science Fiction"
-                if cat == "Systems":
-                    cat = "Systems &amp; Languages"
-                cats_fixed.append(cat)
-            article['categories_fixed'] = cats_fixed
         xml.news = self.articles.values()
         savefile(paths['ainews.output_xml'] + "news.xml", str(xml))
         
@@ -261,7 +183,7 @@ class AINewsPublisher():
                                  'pubdate': date(int(published[0:4]),
                                                  int(published[5:7]),
                                                  int(published[8:10])),
-                                 'summary': re.sub(r'</p>(</blockquote>)?$', '', re.sub(r'^(<blockquote>)?<p>', '', convert_to_printable(node.findtext("Body")))),
+                                 'summary': re.sub(r'</p>(</blockquote>)?$', '', re.sub(r'^(<blockquote>)?<p>', '', node.findtext("Body"))),
                                  'url': node.findtext("Original_link"),
                                  'link': re.sub(r'/news/', 'http://aitopics.org/news/', node.findtext("Link")),
                                  'image': re.sub(r'<img', '<img align="left" style="margin: 8px 8px 8px 0; border: 1px solid #ccc; padding: 5px; background: white;" ',

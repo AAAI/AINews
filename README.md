@@ -41,13 +41,14 @@ NewsFinder is primarily coded in Python and requires the following libraries:
   - [Beautiful Soup](http://www.crummy.com/software/BeautifulSoup/)
   - [PyRSS2Gen](http://www.dalkescientific.com/Python/PyRSS2Gen.html)
   - [feedparser](http://www.feedparser.org/)
+  - [Unidecode](http://pypi.python.org/pypi/Unidecode)
   
 Packages for Ubuntu:
 
 <pre>
 sudo apt-get install python-mysqldb libsvm-tools python-libsvm \
                      python-cheetah python-nltk python-beautifulsoup \
-                     python-pyrss2gen python-feedparser
+                     python-pyrss2gen python-feedparser python-unidecode
 </pre>
 
 "Installation" of NewsFinder should only involve downloading the code in
@@ -115,3 +116,7 @@ Copyright (c) 2011 by the Association for the Advancement of
 Artificial Intelligence. This program and parts of it may be used and
 distributed without charge for non-commercial purposes as long as this
 notice is included.
+
+The file `arff.py` is pulled from the
+[laic-arff](https://github.com/renatopp/liac-arff) package, which is
+distributed under the MIT License.

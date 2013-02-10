@@ -80,12 +80,14 @@ class AINewsTextProcessor:
         @param raw: the raw text to be processed.
         @type raw: C{string}
         """
-        if urlid in self.cache:
+        if urlid > 0 and urlid in self.cache:
             return self.cache[urlid]
 
         unigrams = map(lambda w: self.stem(w), self.unigrams(raw))
-        self.cache[urlid] = nltk.FreqDist(unigrams)
-        return self.cache[urlid]
+        dist = nltk.FreqDist(unigrams)
+        if urlid > 0:
+            self.cache[urlid] = dist
+        return dist
 
     def whiteprocess(self, urlid, raw):
         """

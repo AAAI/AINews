@@ -14,6 +14,7 @@ import locale
 from AINewsConfig import config, paths
 from AINewsCrawler import AINewsCrawler
 from AINewsPublisher import AINewsPublisher
+from AINewsWekaClassifier import AINewsWekaClassifier
 
 def usage():
     """
@@ -31,10 +32,12 @@ def usage():
 
         (3) email:
             Generate an email form for submitting the weekly alert.
+
+        (4) train:
+            Update the classifier models.
         """
 
     print usage
-    
     
 def crawl(opts):
     crawler = AINewsCrawler()
@@ -50,11 +53,15 @@ def email():
     publisher = AINewsPublisher()
     publisher.publish_email_semiauto()
 
+def train():
+    weka = AINewsWekaClassifier()
+    weka.train()
+
 def main():
     # Set en_US, UTF8
     locale.setlocale(locale.LC_ALL,'en_US.UTF-8')
 
-    commands_list = ("crawl", "prepare", "email", "help")
+    commands_list = ("crawl", "prepare", "email", "train", "help")
     try:
         if len(sys.argv) < 2 or sys.argv[1] not in commands_list:
             usage()
@@ -76,6 +83,9 @@ def main():
 
     elif command == "email":
         email()
+
+    elif command == "train":
+        train()
 
 if __name__ == "__main__":
     main()

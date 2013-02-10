@@ -53,7 +53,13 @@ class AINewsCrawler:
     def fetch_all_sources(self, opts):
         for source in self.get_sources(opts):
             print "CRAWL: Crawling \"%s\"..." % source['title']
-            f = feedparser.parse(source['link'])
+            try:
+                f = feedparser.parse(source['link'])
+            except Exception, e:
+                print "Exception while parsing feed: %s" % (source['link'],)
+                print e
+                continue
+
             for entry in f.entries:
                 d = None
                 try:
@@ -74,6 +80,8 @@ class AINewsCrawler:
                 if d > self.today or d < self.earliest_date: continue
                 if entry.title[-6:] == '(blog)' \
                         or entry.title[-15:] == '(press release)':
+                    print "Blog or press release in title. (%s) (%s)" % \
+                        (entry.link, entry.title)
                     continue
                 try:
                     url = urllib2.urlopen(entry.link).geturl()
@@ -84,12 +92,18 @@ class AINewsCrawler:
 
                 # attempt to skip blogs
                 if re.match('^.*blog.*$', url):
+                    print "'blog' in url (%s) (%s)" % \
+                        (entry.link, entry.title)
                     continue
                 # attempt to skip job postings
                 if re.match('^.*job.*$', url):
+                    print "'job' in url (%s) (%s)" % \
+                        (entry.link, entry.title)
                     continue
                 # skip urls we have already crawled
                 if self.db.crawled(url):
+                    print "Seen this url before (%s) (%s)" % \
+                        (entry.link, entry.title)
                     continue
                 
                 title = cgi.escape(convert_to_printable(entry.title)).strip()

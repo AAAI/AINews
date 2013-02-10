@@ -95,3 +95,11 @@ editor_score = /path/to/resource/editor.csv
 ; (leave trailing slash)
 submit_news_data = /path/to/submit_news_data/
 
+[weka]
+
+weka_jar = /usr/share/java/weka.jar
+
+bag_of_words = /home/josh/git/artifice/NewsFinder/weka_training/bag_of_words.pickle
+
+; (leave trailing slash)
+training_arff_dir = /home/josh/git/artifice/NewsFinder/weka_training/
