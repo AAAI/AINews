@@ -161,12 +161,14 @@ class AINewsWekaClassifier:
                                     paths['weka.training_arff_dir'], tid),
                                shell = True, stdout = PIPE).communicate()
             for line in out.splitlines():
-                m = re.search(r'2:no\s+[12]:(no|yes)\s+\+?\s+(\d+\.\d+)', line)
+                m = re.search(r'2:no\s+[12]:(no|yes)\s+\+?\s+(\d+\.?\d*)', line)
                 if m:
                     answer = False
                     if m.group(1) == 'yes':
                         answer = True
                     conf = float(m.group(2))
+                    if conf < 0.75:
+                        answer = False
                     predictions[tid].append((answer, conf))
         return predictions
 
@@ -195,5 +197,5 @@ class AINewsWekaClassifier:
         for tid in sorted(tids):
             for (i, urlid) in enumerate(sorted(articles.keys())):
                 if predictions[tid][i][0]:
-                     articles[urlid]['categories'].append(tid)
+                     articles[urlid]['categories'].append(str(tid))
 

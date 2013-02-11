@@ -98,7 +98,7 @@ class AINewsPublisher():
 
         # update categories based on classifier predictions
         print "Classifying..."
-        weka.predict(articles)
+        self.weka.predict(self.articles)
 
         # drop articles with no categories
         print "Dropping articles with no categories..."
