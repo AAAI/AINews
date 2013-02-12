@@ -35,6 +35,9 @@ def usage():
 
         (4) train:
             Update the classifier models.
+
+        (5) train_experiment:
+            Experimentally evaluate different training methods.
         """
 
     print usage
@@ -57,11 +60,15 @@ def train():
     weka = AINewsWekaClassifier()
     weka.train()
 
+def train_experiment():
+    weka = AINewsWekaClassifier()
+    weka.train_experiment()
+
 def main():
     # Set en_US, UTF8
     locale.setlocale(locale.LC_ALL,'en_US.UTF-8')
 
-    commands_list = ("crawl", "prepare", "email", "train", "help")
+    commands_list = ("crawl", "prepare", "email", "train", "train_experiment", "help")
     try:
         if len(sys.argv) < 2 or sys.argv[1] not in commands_list:
             usage()
@@ -86,6 +93,9 @@ def main():
 
     elif command == "train":
         train()
+
+    elif command == "train_experiment":
+        train_experiment()
 
 if __name__ == "__main__":
     main()

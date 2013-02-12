@@ -9,6 +9,8 @@
 import re
 import pickle
 import arff
+import csv
+from nltk.probability import FreqDist
 from os import listdir, remove
 from subprocess import *
 from AINewsCorpus import AINewsCorpus
@@ -19,67 +21,57 @@ class AINewsWekaClassifier:
     def __init__(self):
         self.txtpro = AINewsTextProcessor()
 
-    def classify_many(self, articles):
-        # create arff file
-        arff = open("%snewsfinder.arff" % paths['weka.tmp_arff_dir'], 'w')
-        arff.write("@relation newsfinder\n")
-        arff.write("@attribute title string\n")
-        arff.write("@attribute class {1,0}\n")
-        arff.write("@data\n")
-
-        sorted_urlids = sorted(articles.keys())
-        for urlid in sorted_urlids:
-            title = re.sub(r'\'', '', articles[urlid]['title'])
-            arff.write("'%s',0\n" % title)
-
-        Popen("java -cp %s %s -i %snewsfinder.arff -o %snewsfinder-wordvec.arff" % \
-                  (paths['weka.weka_jar'], config['weka.wordvec_params'],
-                   paths['weka.tmp_arff_dir'], paths['weka.tmp_arff_dir']),
-              shell = True).communicate()
-
-        print "java -cp %s %s -i %snewsfinder-wordvec.arff -o %snewsfinder-reorder.arff" % \
-                  (paths['weka.weka_jar'], config['weka.reorder_params'],
-                   paths['weka.tmp_arff_dir'], paths['weka.tmp_arff_dir'])
-
-        Popen("java -cp %s %s -i %snewsfinder-wordvec.arff -o %snewsfinder-reorder.arff" % \
-                  (paths['weka.weka_jar'], config['weka.reorder_params'],
-                   paths['weka.tmp_arff_dir'], paths['weka.tmp_arff_dir']),
-              shell = True).communicate()
-
-    def __save_bag_of_words(self, tid):
+    def __save_bag_of_words(self, tid, fieldidx):
         # find all unique words in the arff 'title' field, remove stop
         # words, perform stemming, collect their frequencies
-        titles = []
+        phrases = []
         f = arff.load(open("%s%d.arff" % (paths['weka.training_arff_dir'], tid), 'r'))
         for record in f['data']:
-            titles.append(record[0])
-        bag = self.txtpro.simpletextprocess(0, ' '.join(titles))
-        p = open(paths['weka.bag_of_words'], 'w')
-        pickle.dump(bag, p)
+            phrases.append(record[fieldidx])
+        bag = self.txtpro.simpletextprocess(0, ' '.join(phrases))
+        smallerbag = FreqDist()
+        i = 0
+        for word in bag:
+            if i == 1000:
+                break
+            smallerbag[word] = bag[word]
+            i += 1
+        p = open("%sbag_of_words-%d.pickle" % (paths['weka.bag_of_words_dir'], fieldidx), 'w')
+        pickle.dump(smallerbag, p)
         p.close()
 
     def __prepare_arff(self, tid):
-        # read titles from the arff, create a new arff with word vectors
-        p = open(paths['weka.bag_of_words'], 'r')
-        bag = pickle.load(p)
+        p = open("%sbag_of_words-0.pickle" % paths['weka.bag_of_words_dir'], 'r')
+        bag_title = pickle.load(p)
+        p.close()
+        p = open("%sbag_of_words-1.pickle" % paths['weka.bag_of_words_dir'], 'r')
+        bag_body = pickle.load(p)
         p.close()
 
         data = {'attributes': [], 'data': [], 'description': u'', 'relation': tid}
-        for word in bag:
+        for word in bag_title:
             data['attributes'].append(("title-%s" % word, 'NUMERIC'))
+        for word in bag_body:
+            data['attributes'].append(("body-%s" % word, 'NUMERIC'))
         data['attributes'].append(('class', ['yes', 'no']))
 
         f = arff.load(open("%s%d.arff" % (paths['weka.training_arff_dir'], tid), 'r'))
         for record in f['data']:
-            record_bag = self.txtpro.simpletextprocess(0, record[0])
+            record_bag_title = self.txtpro.simpletextprocess(0, record[0])
+            record_bag_body = self.txtpro.simpletextprocess(0, record[1])
             record_data = []
             # iterate through original bag, figure out freq in this record's bag
-            for word in bag:
-                if word in record_bag:
-                    record_data.append(record_bag[word])
+            for word in bag_title:
+                if word in record_bag_title:
+                    record_data.append(record_bag_title[word])
                 else:
                     record_data.append(0)
-            record_data.append(record[1])
+            for word in bag_body:
+                if word in record_bag_body:
+                    record_data.append(record_bag_body[word])
+                else:
+                    record_data.append(0)
+            record_data.append(record[2])
             data['data'].append(record_data)
 
         fnew = open("%s%d-wordvec-nonsparse.arff" % \
@@ -117,7 +109,8 @@ class AINewsWekaClassifier:
         
         # all tid arffs have same entries, so use the first to grab the bag of words
         print "Saving bag of words..."
-        self.__save_bag_of_words(tids[0])
+        self.__save_bag_of_words(tids[0], 0)
+        self.__save_bag_of_words(tids[0], 1)
 
         for tid in sorted(tids):
             print "Preparing tid %d" % tid
@@ -134,14 +127,71 @@ class AINewsWekaClassifier:
                   shell = True).communicate()
 
             print "Training random forests for tid %d" % tid
-            (out, err) = Popen(("java -cp %s weka.classifiers.trees.RandomForest " +
-                                "-I 20 -K 0 -v " +
-                                "-t %s%d-wordvec-subsample.arff -d %s%d.model") % \
-                                   (paths['weka.weka_jar'],
-                                    paths['weka.training_arff_dir'], tid,
-                                    paths['weka.training_arff_dir'], tid),
-                               shell = True, stdout = PIPE).communicate()
+            Popen(("java -cp %s %s %s -v " +
+                   "-t %s%d-wordvec-subsample.arff -d %s%d.model") % \
+                      (paths['weka.weka_jar'],
+                       config['weka.classifier'],
+                       config['weka.classifier_params'],
+                       paths['weka.training_arff_dir'], tid,
+                       paths['weka.training_arff_dir'], tid),
+                  shell = True, stdout = PIPE).communicate()
             print out
+
+    def train_experiment(self):
+        model_scores = {}
+        models = {'random-forest': ('weka.classifiers.trees.RandomForest', '-I 20 -K 0'),
+                  'naive-bayes': ('weka.classifiers.bayes.NaiveBayes', ''),
+                  'bayesnet': ('weka.classifiers.bayes.BayesNet', ''),
+                  'j48': ('weka.classifiers.trees.J48', ''),
+                  'knn': ('weka.classifiers.lazy.IBk', '-K 3')}
+
+        tids = self.__get_tids()
+        
+        # all tid arffs have same entries, so use the first to grab the bag of words
+        print "Saving bag of words..."
+        self.__save_bag_of_words(tids[0], 0)
+        self.__save_bag_of_words(tids[0], 1)
+
+        for tid in sorted(tids):
+            print "Preparing tid %d" % tid
+            self.__prepare_arff(tid)
+
+        for tid in sorted(tids):
+            print "Spread subsampling for tid %d" % tid
+            Popen(("java -cp %s weka.filters.supervised.instance.SpreadSubsample " +
+                   "-M 1.0 -X 0.0 -S 1 -c last " +
+                   "-i %s%d-wordvec.arff -o %s%d-wordvec-subsample.arff") % \
+                      (paths['weka.weka_jar'],
+                       paths['weka.training_arff_dir'], tid,
+                       paths['weka.training_arff_dir'], tid),
+                  shell = True).communicate()
+
+        for tid in sorted(tids):
+            model_scores[tid] = {}
+            for model in models.keys():
+                print "Training %s for tid %d" % (models[model][0], tid)
+                (out, _) = Popen(("java -cp %s %s %s -v " +
+                                  "-t %s%d-wordvec-subsample.arff -d %s%d.model") % \
+                                     (paths['weka.weka_jar'],
+                                      models[model][0], models[model][1],
+                                      paths['weka.training_arff_dir'], tid,
+                                      paths['weka.training_arff_dir'], tid),
+                                 shell = True, stdout = PIPE).communicate()
+                
+                correct = 0.0
+                for line in out.splitlines():
+                    m = re.search(r'Correctly Classified Instances\s+\d+\s+(.*) %', line)
+                    if m:
+                        correct = float(m.group(1))
+                        break
+                model_scores[tid][model] = correct
+
+        with open('training_experiment.csv', 'w') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['model', 'tid', 'correct'])
+            for tid in model_scores.keys():
+                for model in model_scores[tid].keys():
+                    writer.writerow([model, tid, model_scores[tid][model]])
 
     def __predict_arff(self):
         tids = self.__get_tids()
@@ -154,9 +204,10 @@ class AINewsWekaClassifier:
             predictions[tid] = []
 
             print "Predicting tid %d" % tid
-            (out, err) = Popen(("java -cp %s weka.classifiers.trees.RandomForest " +
+            (out, err) = Popen(("java -cp %s %s " +
                                 "-T %s0-wordvec.arff -l %s%d.model -p last") % \
                                    (paths['weka.weka_jar'],
+                                    config['weka.classifier'],
                                     paths['weka.training_arff_dir'],
                                     paths['weka.training_arff_dir'], tid),
                                shell = True, stdout = PIPE).communicate()
@@ -175,13 +226,15 @@ class AINewsWekaClassifier:
     def predict(self, articles):
         # modifies the provided articles dict
 
-        data = {'attributes': [('title', 'STRING'), ('class', ['yes', 'no'])],
+        data = {'attributes': [('title', 'STRING'),
+                               ('body', 'STRING'),
+                               ('class', ['yes', 'no'])],
                 'data': [], 'description': u'', 'relation': '0'}
 
         for urlid in sorted(articles.keys()):
             title = re.sub(r'\W', ' ', articles[urlid]['title'])
-            title = re.sub(r'\s+', ' ', title)
-            data['data'].append([title, 'no'])
+            body = re.sub(r'\W', ' ', articles[urlid]['summary'])
+            data['data'].append([title, body, 'no'])
 
         # make the testing file 0.arff
         fnew = open("%s0.arff" % paths['weka.training_arff_dir'], 'w')
