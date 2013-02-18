@@ -256,17 +256,20 @@ class AINewsPublisher():
             for node in xml.iter("node"):
                 print "Found", node.findtext("Title")
                 published = node.findtext("Publication_date")
+                image = ""
+                m = re.search(r'(http.*\.jpg)', node.findtext("Representative_image"))
+                if m:
+                    image = m.group(1)
                 articles.append({'title': node.findtext("Title"),
                                  'source': node.findtext("Source"),
                                  'topics': re.sub(r'/topic/', 'http://aitopics.org/topic/', node.findtext("Topics")),
                                  'pubdate': date(int(published[0:4]),
                                                  int(published[5:7]),
                                                  int(published[8:10])),
-                                 'summary': re.sub(r'</p>(</blockquote>)?$', '', re.sub(r'^(<blockquote>)?<p>', '', convert_to_printable(node.findtext("Body")))),
+                                 'summary': node.findtext("Body"),
                                  'url': node.findtext("Original_link"),
-                                 'link': re.sub(r'/news/', 'http://aitopics.org/news/', node.findtext("Link")),
-                                 'image': re.sub(r'<img', '<img align="left" style="margin: 8px 8px 8px 0; border: 1px solid #ccc; padding: 5px; background: white;" ',
-                                                 node.findtext("Representative_image"))})
+                                 'link': 'http://aitopics.org%s' %  node.findtext("Link"),
+                                 'image': image})
         except Exception, e:
             print e
 
