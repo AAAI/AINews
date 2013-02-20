@@ -217,7 +217,10 @@ class AINewsPublisher():
         Generate XML file for feed import on the Drupal site.
         """
         xml = FeedImport()
+        publishable_articles = []
         for article in self.articles.values():
+            if not article['publish']: continue
+
             article['source'] = re.sub(r'&', '&amp;', article['source'])
             cats_fixed = []
             for cat in article['categories']:
@@ -244,8 +247,9 @@ class AINewsPublisher():
                 if cat == "Systems":
                     cat = "Systems &amp; Languages"
                 cats_fixed.append(cat)
-            article['categories_fixed'] = cats_fixed
-        xml.news = self.articles.values()
+            article['categories'] = cats_fixed
+            publishable_articles.append(article)
+        xml.news = publishable_articles
         savefile(paths['ainews.output_xml'] + "news.xml", str(xml))
         
     def generate_email_output(self):
