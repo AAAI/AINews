@@ -18,19 +18,23 @@ import MySQLdb
 from AINewsConfig import db
            
 class AINewsDB:
-    def __init__(self):
+    def __init__(self, testing = False):
         host = db['database.host']
         user = db['database.user']
         pwd = db['database.pwd']
-        database = db['database.db']
+        database = None
+        if testing:
+            database = db['database.db_test']
+        else:
+            database = db['database.db']
         try:
             self.con = MySQLdb.connect(host = host,
-                                        user = user,
-                                        passwd = pwd,
-                                        db = database,
-                                        charset = 'utf8',
-                                        use_unicode = True,
-                                        connect_timeout = 120)
+                                       user = user,
+                                       passwd = pwd,
+                                       db = database,
+                                       charset = 'utf8',
+                                       use_unicode = True,
+                                       connect_timeout = 120)
             self.con.autocommit(True)
         except MySQLdb.Error, e:
             print "Error %d: %s" % (e.args[0], e.args[1])

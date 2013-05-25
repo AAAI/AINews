@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.5.25, for Linux (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.31, for debian-linux-gnu (x86_64)
 --
--- Host: localhost    Database: ainews
+-- Host: localhost    Database: aitopics_newsfinder
 -- ------------------------------------------------------
--- Server version	5.5.25
+-- Server version	5.5.31-0ubuntu0.13.04.1
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -29,7 +29,7 @@ CREATE TABLE `cat_corpus` (
   `content` text NOT NULL,
   `adminrate` int(11) NOT NULL DEFAULT '0',
   PRIMARY KEY (`urlid`)
-) ENGINE=MyISAM AUTO_INCREMENT=6881 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=6952 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -75,6 +75,21 @@ CREATE TABLE `categories` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `crawled`
+--
+
+DROP TABLE IF EXISTS `crawled`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `crawled` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `url` varchar(512) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `url_UNIQUE` (`url`)
+) ENGINE=InnoDB DEFAULT CHARSET=ascii;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `dup`
 --
 
@@ -87,7 +102,7 @@ CREATE TABLE `dup` (
   `comment` varchar(64) DEFAULT NULL,
   PRIMARY KEY (`dupid`),
   UNIQUE KEY `centroid` (`centroid`)
-) ENGINE=MyISAM AUTO_INCREMENT=32 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -120,7 +135,7 @@ CREATE TABLE `sources` (
   `status` int(1) NOT NULL,
   `relevance` int(11) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM AUTO_INCREMENT=70 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -148,24 +163,24 @@ DROP TABLE IF EXISTS `urllist`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `urllist` (
   `urlid` int(11) NOT NULL AUTO_INCREMENT,
-  `url` varchar(255) CHARACTER SET utf8 NOT NULL COMMENT 'news URL address',
-  `tag` varchar(32) CHARACTER SET utf8 DEFAULT NULL COMMENT 'news source type/description',
+  `url` varchar(512) CHARACTER SET ascii NOT NULL COMMENT 'news URL address',
   `pubdate` date DEFAULT NULL COMMENT 'news published date',
   `crawldate` date DEFAULT NULL COMMENT 'news crawled date',
-  `publisher` varchar(64) CHARACTER SET utf8 DEFAULT NULL COMMENT 'news source',
-  `title` varchar(128) CHARACTER SET utf8 DEFAULT NULL COMMENT 'news title',
-  `content` text CHARACTER SET utf8,
+  `source` varchar(256) DEFAULT NULL COMMENT 'news source',
+  `title` varchar(256) DEFAULT NULL COMMENT 'news title',
+  `content` text,
   `processed` tinyint(1) NOT NULL DEFAULT '0',
   `published` tinyint(1) NOT NULL DEFAULT '0',
   `supervised` tinyint(1) NOT NULL DEFAULT '0',
-  `summary` text NOT NULL,
+  `summary` text CHARACTER SET latin1 NOT NULL,
   `publishable` tinyint(1) NOT NULL DEFAULT '0',
-  `tfpn` char(2) NOT NULL DEFAULT 'xx',
+  `tfpn` char(2) CHARACTER SET latin1 NOT NULL DEFAULT 'xx',
+  `image_url` varchar(512) CHARACTER SET ascii DEFAULT NULL,
+  `source_id` varchar(45) CHARACTER SET latin1 DEFAULT NULL,
+  `source_relevance` int(11) DEFAULT NULL,
   PRIMARY KEY (`urlid`),
-  UNIQUE KEY `url` (`url`),
-  KEY `crawldate` (`crawldate`,`pubdate`),
-  KEY `tag` (`tag`)
-) ENGINE=MyISAM AUTO_INCREMENT=8510 DEFAULT CHARSET=latin1;
+  KEY `crawldate` (`crawldate`,`pubdate`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -180,7 +195,7 @@ CREATE TABLE `wordlist` (
   `word` varchar(300) CHARACTER SET utf8 NOT NULL,
   `dftext` int(11) NOT NULL DEFAULT '0' COMMENT 'text doc freq',
   PRIMARY KEY (`rowid`)
-) ENGINE=MyISAM AUTO_INCREMENT=37860 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -195,7 +210,7 @@ CREATE TABLE `wordlist_eval` (
   `word` varchar(300) CHARACTER SET utf8 NOT NULL,
   `dftext` int(11) NOT NULL DEFAULT '0' COMMENT 'text doc freq',
   PRIMARY KEY (`rowid`)
-) ENGINE=MyISAM AUTO_INCREMENT=39632 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -207,4 +222,4 @@ CREATE TABLE `wordlist_eval` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2012-06-15 19:04:20
+-- Dump completed on 2013-05-25 13:26:59

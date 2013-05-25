@@ -24,10 +24,10 @@ from AINewsDB import AINewsDB
 from AINewsSummarizer import AINewsSummarizer
 
 class AINewsCrawler:
-    def __init__(self):
+    def __init__(self, testing = False):
         self.today = date.today()
         self.earliest_date = self.today - timedelta(days = int(config['ainews.period']))
-        self.db = AINewsDB()
+        self.db = AINewsDB(testing)
         self.summarizer = AINewsSummarizer()
         self.articles = []
 

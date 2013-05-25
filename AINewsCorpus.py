@@ -38,7 +38,7 @@ class AINewsCorpus:
     training procedures, and we restore a corpus when we are
     predicting.
     """
-    def __init__(self):
+    def __init__(self, testing = False):
         self.txtpro = AINewsTextProcessor()
         self.cache_urls = {}
 
@@ -51,7 +51,7 @@ class AINewsCorpus:
         #: A dictionary of wordid=>word
         self.wordids = {}
 
-        self.db = AINewsDB()
+        self.db = AINewsDB(testing)
 
         self.categories = ["AIOverview","Agents", "Applications", \
                  "CognitiveScience", "Education", "Ethics", "Games", "History", \
