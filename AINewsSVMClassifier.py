@@ -16,8 +16,8 @@ from AINewsCorpus import AINewsCorpus
 from AINewsTools import loadfile, savepickle
 
 class AINewsSVMClassifier:
-    def __init__(self):
-        self.corpus = AINewsCorpus()
+    def __init__(self, testing = False):
+        self.corpus = AINewsCorpus(testing)
 
     def predict(self, articles):
         urlids = sorted(articles.keys())

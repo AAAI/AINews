@@ -31,14 +31,14 @@ from FeedImport import FeedImport
 from LatestNewsEmail import LatestNewsEmail
 
 class AINewsPublisher():
-    def __init__(self):
+    def __init__(self, testing = False):
         self.debug = config['ainews.debug']
         self.today = date.today()
         self.earliest_date = self.today - timedelta(days = int(config['ainews.period']))
-        self.db = AINewsDB()
-        self.corpus = AINewsCorpus()
-        self.duplicates = AINewsDuplicates()
-        self.svm_classifier = AINewsSVMClassifier()
+        self.db = AINewsDB(testing)
+        self.corpus = AINewsCorpus(testing)
+        self.duplicates = AINewsDuplicates(testing)
+        self.svm_classifier = AINewsSVMClassifier(testing)
         self.txtpro = AINewsTextProcessor()
 
         self.articles = {}

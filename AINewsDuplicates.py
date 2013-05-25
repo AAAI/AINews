@@ -25,8 +25,8 @@ def add_to_duplicates(duplicates, urlid1, urlid2):
         duplicates.append(dupset)
 
 class AINewsDuplicates:
-    def __init__(self):
-        self.corpus = AINewsCorpus()
+    def __init__(self, testing = False):
+        self.corpus = AINewsCorpus(testing)
 
     def filter_duplicates(self, articles):
         date_start = date.today() - timedelta(days = int(config['duplicates.days_back']))
