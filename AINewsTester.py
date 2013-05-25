@@ -18,7 +18,7 @@ class TestAINewsCrawler(unittest.TestCase):
     def setUp(self):
         self.corpus = AINewsCorpus(True)
         self.crawler = AINewsCrawler(True)
-        self.crawler.articles = [{'url': 'http://www.dailymail.co.uk/sciencetech/article-2329080/IBM-reveals-worlds-advanced-set-let-loose-centre-operator.html?ITO=1490&ns_mchannel=rss&ns_campaign=1490', 'title': 'IBM reveals world\'s most advanced computer set to be let loose as a call centre operator', 'pubdate': date.today(), 'source': 'Daily Mail', 'source_id': '0', 'source_relevance': 50}]
+        self.crawler.articles = [{'url': 'http://www.vancouversun.com/technology/personal-tech/Video+Google+Glass+forefront+wearable+technology/8402234/story.html', 'title': 'xyz', 'pubdate': date.today(), 'source': 'abc', 'source_id': '0', 'source_relevance': 50}]
     
     def test_fetch_all_articles(self):
         self.crawler.fetch_all_articles()
