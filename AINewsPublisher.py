@@ -44,13 +44,6 @@ class AINewsPublisher():
         self.articles = {}
         self.semiauto_email_output = ""
 
-        self.topicids = {"AIOverview":0, "Agents":1, "Applications":2,
-           "CognitiveScience":3, "Education":4,"Ethics":5, 
-           "Games":6, "History":7, "Interfaces":8, "MachineLearning":9,
-           "NaturalLanguage":10, "Philosophy":11, "Reasoning":12,
-           "Representation":13, "Robots":14, "ScienceFiction":15,"Speech":16,
-           "Systems":17,  "Vision":18}
-
     def filter_and_process(self):
         self.articles = self.corpus.get_unprocessed()
 
