@@ -254,7 +254,7 @@ class AINewsPublisher():
                 print "Found", node.findtext("Title")
                 published = node.findtext("Publication_date")
                 image = ""
-                m = re.search(r'(http.*\.jpg)', node.findtext("Representative_image"))
+                m = re.search(r'(http.*\.(jpg|png))', node.findtext("Representative_image"))
                 if m:
                     image = m.group(1)
                 articles.append({'title': node.findtext("Title"),
